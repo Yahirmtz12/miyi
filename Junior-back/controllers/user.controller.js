@@ -146,7 +146,7 @@ exports.updateUserRol = async (req, res) => {
   const { rol } = req.body;
 
   // Validar que el rol sea uno de los permitidos
-  const rolesPermitidos = ['admin', 'cajero','cliente','mesero','cocinero'];
+  const rolesPermitidos = ['admin', 'cajero','cliente','mesero','cocinero','kiosko',];
   if (!rolesPermitidos.includes(rol)) {
     return res.status(400).json({ msg: 'Rol no válido. Debe ser admin o cajero.' });
   }
@@ -194,20 +194,107 @@ exports.getMemberById = async (req, res) => {
   const { membershipId } = req.params;
 
   try {
-    // Buscamos al usuario por el ID de membresía PJ-XXXXXX
-    // Usamos .select('nombre puntos') para no enviar datos sensibles como password
-    const user = await User.findOne({ membershipId }).select('nombre puntos');
+    // 1. Seleccionamos los campos necesarios para la academia
+    // Quitamos 'puntos' (si ya no los usas) y agregamos clases y vencimiento
+    const user = await User.findOne({ membershipId })
+      .select('nombre clasesDisponibles fechaVencimiento rol');
 
     if (!user) {
-      return res.status(404).json({ msg: 'Código de membresía no válido o cliente no encontrado' });
+      return res.status(404).json({ 
+        msg: 'Código de membresía no válido o alumno no encontrado' 
+      });
     }
 
+    // 2. Lógica de validación instantánea
+    const hoy = new Date();
+    let estadoMembresia = "activa";
+    let mensajeEstado = "Acceso permitido";
+
+    // ¿Ya se pasó de la fecha?
+    if (user.fechaVencimiento && user.fechaVencimiento < hoy) {
+      estadoMembresia = "vencida";
+      mensajeEstado = "El mes ha finalizado. Requiere renovación.";
+    } 
+    // ¿Tiene fecha vigente pero ya no tiene clases?
+    else if (user.clasesDisponibles <= 0) {
+      estadoMembresia = "sin_clases";
+      mensajeEstado = "Sin clases disponibles. Favor de recargar.";
+    }
+
+    // 3. Respuesta enriquecida para el frontend
     res.status(200).json({
       nombre: user.nombre,
-      puntos: user.puntos || 0
+      clasesDisponibles: user.clasesDisponibles,
+      fechaVencimiento: user.fechaVencimiento,
+      status: estadoMembresia, // Esto te servirá para poner colores (Rojo/Verde) en React
+      mensaje: mensajeEstado
     });
+
   } catch (error) {
     console.error("Error al buscar miembro:", error);
     res.status(500).json({ msg: 'Error al consultar el servidor' });
+  }
+};
+exports.renewMembership = async (req, res) => {
+  try {
+    const { membershipId, cantidadClases } = req.body;
+    
+    // Calculamos la fecha actual + 30 días
+    const nuevaFechaVencimiento = new Date();
+    nuevaFechaVencimiento.setDate(nuevaFechaVencimiento.getDate() + 30);
+
+    const alumnoActualizado = await User.findOneAndUpdate(
+      { membershipId: membershipId },
+      { 
+        clasesDisponibles: cantidadClases , // Suma las clases nuevas a las que ya tenía (si aplica)
+        fechaVencimiento: nuevaFechaVencimiento 
+      },
+      { new: true } // Retorna el documento actualizado
+    );
+
+    if (!alumnoActualizado) {
+      return res.status(404).json({ msg: "Alumno no encontrado" });
+    }
+
+    res.json({ msg: "Membresía renovada con éxito", alumno: alumnoActualizado });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+exports.registerAttendance = async (req, res) => {
+  try {
+    const { membershipId, nombreClase } = req.body;
+    const hoy = new Date();
+
+    // 1. Buscamos al alumno
+    const alumno = await User.findOne({ membershipId });
+
+    if (!alumno) {
+      return res.status(404).json({ msg: "Membresía no válida" });
+    }
+
+    // 2. Validar Fecha de Vencimiento
+    if (alumno.fechaVencimiento < hoy) {
+      return res.status(403).json({ msg: "Tu mes ha vencido. Por favor pasa a recepción." });
+    }
+
+    // 3. Validar Clases Disponibles
+    if (alumno.clasesDisponibles <= 0) {
+      return res.status(403).json({ msg: "Ya no tienes clases disponibles este mes." });
+    }
+
+    // 4. Si todo está bien, descontamos 1 clase y registramos la visita
+    alumno.clasesDisponibles -= 1;
+    alumno.asistencias.push({ fecha: hoy});
+    
+    await alumno.save();
+
+    res.json({ 
+      msg: "Acceso concedido", 
+      clasesRestantes: alumno.clasesDisponibles 
+    });
+
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 };

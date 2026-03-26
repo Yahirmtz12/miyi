@@ -99,8 +99,8 @@ export default function Sales() {
 
     // 1. Definimos el ticket de texto
     const textoTicket =
-      `       San Sebastian \n` +
-      `      SUCURSAL ZAACHILA\n` +
+      `       Rhytm \n` +
+      `      SUCURSAL Oaxaca\n` +
       `--------------------------------\n` +
       `${itemsText}\n` +
       `--------------------------------\n` +
@@ -110,8 +110,8 @@ export default function Sales() {
       `--------------------------------\n` +
       `    ¡GRACIAS POR SU COMPRA!\n` +
       `      ${fecha}\n\n\n\n`+
-      `       San Sebastian \n` +
-      `      SUCURSAL ZAACHILA\n` +
+      `       Rhytm \n` +
+      `      SUCURSAL Oaxaca\n` +
       `--------------------------------\n` +
       `${itemsText}\n` +
       `--------------------------------\n` +
@@ -165,7 +165,7 @@ export default function Sales() {
     const cleanPhone = phone.replace(/\D/g, '');
     const finalPhone = cleanPhone.length === 10 ? `521${cleanPhone}` : cleanPhone;
     const itemsText = order.map(i => `• ${i.qty}x ${i.nombre.toUpperCase()} - $${(i.qty * i.precio).toFixed(2)}`).join('%0A');
-    const message = `*🍗 San Sebastian 🍗*%0A` + `*Ticket Digital - Sucursal Zaachila*%0A` + `--------------------------%0A` + `${itemsText}%0A` + `--------------------------%0A` + `*TOTAL: $${total.toFixed(2)}*%0A` + `Efectivo: $${parseFloat(lastSale.efectivoRecibido).toFixed(2)}%0A` + `Cambio: $${lastSale.cambio.toFixed(2)}%0A` + `--------------------------%0A` + `¡Gracias por su compra!%0A` + `_Generado por San Sebastian _`;
+    const message = `*🍗 Rhytm 🍗*%0A` + `*Ticket Digital - Sucursal Oaxaca*%0A` + `--------------------------%0A` + `${itemsText}%0A` + `--------------------------%0A` + `*TOTAL: $${total.toFixed(2)}*%0A` + `Efectivo: $${parseFloat(lastSale.efectivoRecibido).toFixed(2)}%0A` + `Cambio: $${lastSale.cambio.toFixed(2)}%0A` + `--------------------------%0A` + `¡Gracias por su compra!%0A` + `_Generado por Rhytm _`;
     window.open(`https://wa.me/${finalPhone}?text=${message}`, '_blank');
   };
 
@@ -239,7 +239,7 @@ export default function Sales() {
               </div>
               <div>
                 <h1 className="text-xl md:text-3xl font-black uppercase tracking-tight">Venta</h1>
-                <p className="text-white/40 text-[10px] md:text-sm italic">San Sebastian - Zaachila</p>
+                <p className="text-white/40 text-[10px] md:text-sm italic">Rhytm - Oaxaca</p>
               </div>
             </div>
             <button
@@ -292,7 +292,7 @@ export default function Sales() {
         <div className="p-6 md:p-8 border-b border-white/10 flex justify-between items-center shrink-0">
           <div>
             <div className="flex items-center gap-2 mb-1"><FiShoppingBag className="text-secondary" /><h2 className="text-xl font-black uppercase">Orden Actual</h2></div>
-            <p className="text-[10px] text-white/30 uppercase tracking-[0.2em] font-bold italic">San Sebastian Orden</p>
+            <p className="text-[10px] text-white/30 uppercase tracking-[0.2em] font-bold italic">Rhytm Orden</p>
           </div>
           <button onClick={() => setShowOrderMobile(false)} className="lg:hidden p-2 text-white/40 hover:text-white">
             <FiX size={24} />

@@ -172,7 +172,7 @@ export default function Inventory() {
             </div>
             <div>
               <h1 className="text-xl md:text-3xl font-black uppercase tracking-tight">Inventario</h1>
-              <p className="text-white/40 text-[10px] md:text-sm italic">San Sebastian - Zaachila</p>
+              <p className="text-white/40 text-[10px] md:text-sm italic">Rhytm - Oaxaca</p>
             </div>
           </div>
         </div>

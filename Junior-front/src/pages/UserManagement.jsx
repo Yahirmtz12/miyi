@@ -158,7 +158,7 @@ export default function UserManagement() {
           </div>
           <div>
             <h1 className="text-xl md:text-3xl font-black uppercase tracking-tight">Usuarios</h1>
-            <p className="text-white/40 text-[10px] md:text-sm italic">San Sebastian - Zaachila</p>
+            <p className="text-white/40 text-[10px] md:text-sm italic">Rhytm - Oaxaca</p>
           </div>
         </div>
 
@@ -214,7 +214,8 @@ export default function UserManagement() {
                         u.rol === 'cajero' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
                           u.rol === 'cocinero' ? 'bg-orange-500/10 text-orange-400 border-orange-500/20' :
                             u.rol === 'mesero' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
-                              'bg-gray-500/10 text-gray-400 border-gray-500/20'
+                              u.rol === 'kiosko' ? 'bg-red-500/10 text-green-400 border-green-500/20' :
+                                'bg-gray-500/10 text-gray-400 border-gray-500/20'
                         }`}>
                         {u.rol}
                       </span>
@@ -356,6 +357,7 @@ export default function UserManagement() {
                   <option value="cocinero">Cocinero (Monitor Cocina)</option>
                   <option value="mesero">Mesero (Control Mesas)</option>
                   <option value="cliente">Cliente (Miembro)</option>
+                  <option value="kiosko">Kiosko</option>
                 </select>
               </div>
 
@@ -432,7 +434,7 @@ export default function UserManagement() {
       )}
 
       <footer className="mt-10 p-10 text-center opacity-10">
-        <p className="text-[10px] font-black uppercase tracking-[0.5em] italic">Staff Only - San Sebastian</p>
+        <p className="text-[10px] font-black uppercase tracking-[0.5em] italic">Staff Only - Rhytm</p>
       </footer>
     </div>
   );

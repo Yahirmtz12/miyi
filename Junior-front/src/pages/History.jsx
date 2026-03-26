@@ -88,7 +88,7 @@ export default function History() {
           </div>
           <div>
             <h1 className="text-xl md:text-3xl font-black uppercase tracking-tight">Historial</h1>
-                <p className="text-white/40 text-[10px] md:text-sm italic">San Sebastian - Zaachila</p>
+                <p className="text-white/40 text-[10px] md:text-sm italic">Rhytm - Oaxaca</p>
           </div>
         </div>
 
@@ -294,7 +294,7 @@ export default function History() {
       )}
 
       <footer className="mt-10 p-10 text-center opacity-10">
-        <p className="text-[10px] font-black uppercase tracking-[0.5em] italic">History Logs - San Sebastian</p>
+        <p className="text-[10px] font-black uppercase tracking-[0.5em] italic">History Logs - Rhytm</p>
       </footer>
     </div>
   );

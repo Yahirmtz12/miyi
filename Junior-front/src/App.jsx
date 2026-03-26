@@ -14,6 +14,7 @@ import MembresiaStaff from "./pages/MembresiaStaff";
 import LandingKFC from './pages/LandingKFC';
 import WaiterPanel from './pages/WaiterPanel';
 import KitchenView from './pages/KitchenView';
+import Kios from './pages/KioskoMembresia';
 
 export default function App() {
   const user = JSON.parse(localStorage.getItem("user") || "{}");
@@ -24,12 +25,15 @@ export default function App() {
   const isCocinero = user.rol === 'cocinero';
   const isMesero = user.rol === 'mesero';
   const isCliente = user.rol === 'cliente';
+  const iskiosko = user.rol === 'kiosko';
+
 
   // Helper para redirección inicial según el rol
   const getHomePath = () => {
     if (isCocinero) return "/dashboard/kitchen";
     if (isMesero) return "/dashboard/mesero";
     if (isCliente) return "/mi-membresia";
+    if (iskiosko) return "/dashboard/kiosko";
     return "/dashboard/sales"; // Admin y Cajero
   };
 
@@ -69,6 +73,10 @@ export default function App() {
           <Route 
             path="kitchen" 
             element={isAdmin || isCocinero ? <KitchenView /> : <Navigate to={getHomePath()} replace />} 
+          />
+          <Route 
+            path="kiosko" 
+            element={isAdmin || iskiosko ? <Kios /> : <Navigate to={getHomePath()} replace />} 
           />
 
           {/* MESERO: Solo Admin y Mesero */}

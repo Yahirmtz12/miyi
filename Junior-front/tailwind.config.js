@@ -8,8 +8,8 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: "#7AC114",   // El azul de San Sebastian
-        secondary: "#E0A21A", // El naranja de San Sebastian
+        primary: "#C5A473",   // El azul de Rhytm
+        secondary: "#8C6A3B", // El naranja de Rhytm
         dark: "#1f1212",
       },
       fontFamily: {
