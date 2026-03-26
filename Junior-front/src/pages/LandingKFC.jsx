@@ -30,7 +30,7 @@ export default function RhytmOaxacaPage() {
   const irARegistro = () => { window.location.href = "/register"; };
 
   const handleWhatsappCotizacion = () => {
-    const telefono = "9515694089";
+    const telefono = "9515571964";
     const mensaje = encodeURIComponent("¡Hola! Me gustaría pedir información sobre las clases y/o coreografías para XV años en Rhytm Oaxaca.");
     window.open(`https://wa.me/${telefono}?text=${mensaje}`, '_blank');
   };
@@ -45,7 +45,7 @@ export default function RhytmOaxacaPage() {
             <img
               src={LOGO}
               alt="Logo Rhytm Oaxaca"
-              className="h-full w-full object-cover scale-150"
+              className="h-full w-full object-cover scale-140"
             />
           </div>
           <div className="text-xl md:text-2xl font-black tracking-widest text-white uppercase">

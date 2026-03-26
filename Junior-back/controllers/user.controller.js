@@ -247,7 +247,8 @@ exports.renewMembership = async (req, res) => {
       { membershipId: membershipId },
       { 
         clasesDisponibles: cantidadClases , // Suma las clases nuevas a las que ya tenía (si aplica)
-        fechaVencimiento: nuevaFechaVencimiento 
+        fechaVencimiento: nuevaFechaVencimiento ,
+        asistencias: []
       },
       { new: true } // Retorna el documento actualizado
     );
