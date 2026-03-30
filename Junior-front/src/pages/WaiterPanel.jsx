@@ -306,27 +306,33 @@ export default function WaiterPanel() {
 
     // --- IMPRESIÓN Y REDES (CORREGIDO PARA NO ROMPER LA APP) ---
    const imprimirTicket = () => {
-    const itemsText = order.map(i => `${i.qty}x ${i.nombre.toUpperCase()} - $${(i.qty * i.precio).toFixed(2)}`).join('\n');
+    // 1. Usamos 'order' que ya tienes en el estado
+    const itemsText = order.map(i => 
+      `${i.qty}x ${i.nombre.toUpperCase().slice(0, 15)} - $${(i.qty * i.precio).toFixed(2)}`
+    ).join('\n');
     
-    // Formateamos el texto del ticket
+    // 2. Usamos 'cashReceived' que es tu estado local del input
+    const montoEfectivo = parseFloat(cashReceived) || 0;
+    const cambio = montoEfectivo > total ? montoEfectivo - total : 0;
+
     const textoTicket = 
-      `🍗 MR POLLO 🍗\n` +
+      `Rhytm Oaxaca\n` + // Nombre actualizado
       `SUCURSAL ZAACHILA\n` +
       `--------------------------\n` +
       `${itemsText}\n` +
       `--------------------------\n` +
       `TOTAL: $${total.toFixed(2)}\n` +
-      `EFECTIVO: $${parseFloat(lastSale?.efectivoRecibido || efectivo || 0).toFixed(2)}\n` +
-      `CAMBIO: $${lastSale?.cambio?.toFixed(2) || "0.00"}\n` +
+      `EFECTIVO: $${montoEfectivo.toFixed(2)}\n` +
+      `CAMBIO: $${cambio.toFixed(2)}\n` +
       `--------------------------\n` +
       `¡GRACIAS POR SU COMPRA!\n` +
-      `${new Date().toLocaleString()}\n\n\n`;
+      `${new Date().toLocaleString()}\n\n\n\n`;
 
-    // Usamos el esquema "rawbt:text/" que es mucho más estable que base64 para texto simple
+    // 3. Esquema RawBT para Android
     const linkRawBT = "intent:" + encodeURIComponent(textoTicket) + "#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;end;";
     
     window.location.href = linkRawBT;
-  };
+};
     const sendWhatsApp = () => {
         if (!phone || phone.length < 10) return alert("Por favor, ingresa un número de 10 dígitos");
         const cleanPhone = phone.replace(/\D/g, '');

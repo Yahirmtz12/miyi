@@ -97,8 +97,8 @@ export default function Sales() {
     
     // Texto del ticket (Agregamos comandos de formato RawBT como [C] para centrar)
     const textoTicket = 
-      `[C]🍗 MR TAPI 🍗\n` + // Actualizado a tu nuevo logo/nombre
-      `[C]SUCURSAL ZAACHILA\n` +
+      ` Rhytm Oaxaca\n` + // Actualizado a tu nuevo logo/nombre
+      `SUCURSAL ZAACHILA\n` +
       `--------------------------------\n` +
       `${itemsText}\n` +
       `--------------------------------\n` +
@@ -106,8 +106,8 @@ export default function Sales() {
       `EFECTIVO:       $${parseFloat(lastSale?.efectivoRecibido || efectivo || 0).toFixed(2).padStart(10)}\n` +
       `CAMBIO:         $${(lastSale?.cambio || 0).toFixed(2).padStart(10)}\n` +
       `--------------------------------\n` +
-      `[C]¡GRACIAS POR SU COMPRA!\n` +
-      `[C]${new Date().toLocaleString()}\n\n\n\n`;
+      `¡GRACIAS POR SU COMPRA!\n` +
+      `${new Date().toLocaleString()}\n\n\n\n`;
 
     // CONSTRUCCIÓN CORRECTA DEL INTENT PARA ANDROID
     // El formato debe ser intent://#Intent;...
