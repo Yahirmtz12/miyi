@@ -315,9 +315,11 @@ export default function WaiterPanel() {
     const montoEfectivo = parseFloat(cashReceived) || 0;
     const cambio = montoEfectivo > total ? montoEfectivo - total : 0;
 
+    // Agregamos [DRAWER] al inicio para abrir la caja
     const textoTicket = 
-      `Rhytm Oaxaca\n` + // Nombre actualizado
-      `SUCURSAL ZAACHILA\n` +
+      `[DRAWER]` + 
+      `Rhytm Oaxaca\n` + 
+      `SUCURSAL Centro\n` +
       `--------------------------\n` +
       `${itemsText}\n` +
       `--------------------------\n` +
@@ -341,7 +343,7 @@ export default function WaiterPanel() {
 
 
         const message = `*🍗 Rhytm 🍗*%0A` +
-            `*Ticket Digital - Sucursal Oaxaca*%0A` +
+            `*Ticket Digital - Sucursal Centro*%0A` +
             `--------------------------%0A` +
             `${itemsText}%0A` +
             `--------------------------%0A` +

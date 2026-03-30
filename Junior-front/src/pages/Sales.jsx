@@ -95,10 +95,11 @@ export default function Sales() {
       `${i.qty}x ${i.nombre.toUpperCase().padEnd(12)} $${(i.qty * i.precio).toFixed(2).padStart(7)}`
     ).join('\n');
     
-    // Texto del ticket (Agregamos comandos de formato RawBT como [C] para centrar)
+    // Agregamos [DRAWER] al inicio para abrir la caja registradora
     const textoTicket = 
-      ` Rhytm Oaxaca\n` + // Actualizado a tu nuevo logo/nombre
-      `SUCURSAL ZAACHILA\n` +
+      `[DRAWER]` + 
+      `[C]Rhytm Oaxaca\n` + 
+      `[C]SUCURSAL CENTRO\n` +
       `--------------------------------\n` +
       `${itemsText}\n` +
       `--------------------------------\n` +
@@ -106,15 +107,13 @@ export default function Sales() {
       `EFECTIVO:       $${parseFloat(lastSale?.efectivoRecibido || efectivo || 0).toFixed(2).padStart(10)}\n` +
       `CAMBIO:         $${(lastSale?.cambio || 0).toFixed(2).padStart(10)}\n` +
       `--------------------------------\n` +
-      `¡GRACIAS POR SU COMPRA!\n` +
-      `${new Date().toLocaleString()}\n\n\n\n`;
+      `[C]¡GRACIAS POR SU COMPRA!\n` +
+      `[C]${new Date().toLocaleString()}\n\n\n\n`;
 
     // CONSTRUCCIÓN CORRECTA DEL INTENT PARA ANDROID
-    // El formato debe ser intent://#Intent;...
     const encodedText = encodeURIComponent(textoTicket);
     const intentURL = `intent:${encodedText}#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;end;`;
 
-    // Intentamos abrir el enlace
     try {
       window.location.href = intentURL;
     } catch (e) {
