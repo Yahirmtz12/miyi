@@ -312,7 +312,7 @@ export default function WaiterPanel() {
 
         const fecha = new Date().toLocaleString();
 
-        // ELIMINADAS variables inexistentes como lastSale.efectivo
+        // ELIMINADAS vadddriables inexistentes como lastSale.efectivo
         const textoTicket =
             `       Rhytm \n` +
             `      SUCURSAL Oaxaca\n` +
