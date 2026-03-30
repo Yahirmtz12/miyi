@@ -91,27 +91,36 @@ export default function Sales() {
   const total = order.reduce((a, i) => a + i.precio * i.qty, 0);
 
   const imprimirTicket = () => {
-    const itemsText = order.map(i => `${i.qty}x ${i.nombre.toUpperCase()} - $${(i.qty * i.precio).toFixed(2)}`).join('\n');
+    const itemsText = order.map(i => 
+      `${i.qty}x ${i.nombre.toUpperCase().padEnd(12)} $${(i.qty * i.precio).toFixed(2).padStart(7)}`
+    ).join('\n');
     
-    // Formateamos el texto del ticket
+    // Texto del ticket (Agregamos comandos de formato RawBT como [C] para centrar)
     const textoTicket = 
-      `🍗 MR POLLO 🍗\n` +
-      `SUCURSAL ZAACHILA\n` +
-      `--------------------------\n` +
+      `[C]🍗 MR TAPI 🍗\n` + // Actualizado a tu nuevo logo/nombre
+      `[C]SUCURSAL ZAACHILA\n` +
+      `--------------------------------\n` +
       `${itemsText}\n` +
-      `--------------------------\n` +
-      `TOTAL: $${total.toFixed(2)}\n` +
-      `EFECTIVO: $${parseFloat(lastSale?.efectivoRecibido || efectivo || 0).toFixed(2)}\n` +
-      `CAMBIO: $${lastSale?.cambio?.toFixed(2) || "0.00"}\n` +
-      `--------------------------\n` +
-      `¡GRACIAS POR SU COMPRA!\n` +
-      `${new Date().toLocaleString()}\n\n\n`;
+      `--------------------------------\n` +
+      `TOTAL:          $${total.toFixed(2).padStart(10)}\n` +
+      `EFECTIVO:       $${parseFloat(lastSale?.efectivoRecibido || efectivo || 0).toFixed(2).padStart(10)}\n` +
+      `CAMBIO:         $${(lastSale?.cambio || 0).toFixed(2).padStart(10)}\n` +
+      `--------------------------------\n` +
+      `[C]¡GRACIAS POR SU COMPRA!\n` +
+      `[C]${new Date().toLocaleString()}\n\n\n\n`;
 
-    // Usamos el esquema "rawbt:text/" que es mucho más estable que base64 para texto simple
-    const linkRawBT = "intent:" + encodeURIComponent(textoTicket) + "#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;end;";
-    
-    window.location.href = linkRawBT;
-  };
+    // CONSTRUCCIÓN CORRECTA DEL INTENT PARA ANDROID
+    // El formato debe ser intent://#Intent;...
+    const encodedText = encodeURIComponent(textoTicket);
+    const intentURL = `intent:${encodedText}#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;end;`;
+
+    // Intentamos abrir el enlace
+    try {
+      window.location.href = intentURL;
+    } catch (e) {
+      alert("Asegúrate de tener instalada la app RawBT Printer en tu tablet.");
+    }
+};
   const sendWhatsApp = () => {
     if (!phone || phone.length < 10) return alert("Por favor, ingresa un número de 10 dígitos");
     const cleanPhone = phone.replace(/\D/g, '');
