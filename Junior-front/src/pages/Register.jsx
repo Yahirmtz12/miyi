@@ -74,7 +74,7 @@ export default function Register() {
 
             <h2 className="text-2xl font-black text-white uppercase tracking-tighter italic">¡Registro Exitoso!</h2>
             <p className="text-white/40 text-sm mt-4 font-medium italic">
-              Bienvenido al Club VIP de Mr. Pollo. Tu cuenta ha sido creada correctamente.
+              Bienvenido al Club . Tu cuenta ha sido creada correctamente.
             </p>
 
             <button
@@ -119,7 +119,7 @@ export default function Register() {
               ÚNETE AL <span className="text-primary">CLUB</span>
             </h1>
             <div className="h-1 w-12 bg-secondary mt-2 rounded-full" />
-            <p className="text-white/40 text-[11px] mt-4 font-medium uppercase tracking-widest italic">Beneficios exclusivos en cada bocado</p>
+            <p className="text-white/40 text-[11px] mt-4 font-medium uppercase tracking-widest italic">Beneficios exclusivos</p>
           </div>
 
           {error && (
@@ -203,7 +203,7 @@ export default function Register() {
                 : 'bg-white/5 text-white/20 cursor-not-allowed'
                 }`}
             >
-              {loading ? <FiLoader className="animate-spin mx-auto" /> : "Crear mi Cuenta VIP"}
+              {loading ? <FiLoader className="animate-spin mx-auto" /> : "Crear mi Cuenta"}
             </button>
           </form>
 
