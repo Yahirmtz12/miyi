@@ -91,13 +91,16 @@ export default function Sales() {
   const total = order.reduce((a, i) => a + i.precio * i.qty, 0);
 
   const imprimirTicket = () => {
+    // El comando ESC/POS puro que mencionas (Apertura de cajón)
+    const comandoApertura = "\u001b\u0070\u0000\u0019\u00fa";
+
     const itemsText = order.map(i => 
       `${i.qty}x ${i.nombre.toUpperCase().padEnd(12)} $${(i.qty * i.precio).toFixed(2).padStart(7)}`
     ).join('\n');
     
-    // Agregamos [DRAWER] al inicio para abrir la caja registradora
+    // Concatenamos el comando al inicio del texto del ticket
     const textoTicket = 
-      `[DRAWER]` + 
+      comandoApertura + 
       `[C]Rhytm Oaxaca\n` + 
       `[C]SUCURSAL CENTRO\n` +
       `--------------------------------\n` +
@@ -110,7 +113,7 @@ export default function Sales() {
       `[C]¡GRACIAS POR SU COMPRA!\n` +
       `[C]${new Date().toLocaleString()}\n\n\n\n`;
 
-    // CONSTRUCCIÓN CORRECTA DEL INTENT PARA ANDROID
+    // CONSTRUCCIÓN DEL INTENT PARA ANDROID
     const encodedText = encodeURIComponent(textoTicket);
     const intentURL = `intent:${encodedText}#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;end;`;
 

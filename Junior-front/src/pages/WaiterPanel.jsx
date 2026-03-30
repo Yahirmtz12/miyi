@@ -306,18 +306,21 @@ export default function WaiterPanel() {
 
     // --- IMPRESIÓN Y REDES (CORREGIDO PARA NO ROMPER LA APP) ---
    const imprimirTicket = () => {
-    // 1. Usamos 'order' que ya tienes en el estado
+    // Definimos el comando de apertura de cajón (ESC p 0 25 250)
+    const comandoApertura = "\u001b\u0070\u0000\u0019\u00fa";
+
+    // 1. Mapeo de items
     const itemsText = order.map(i => 
       `${i.qty}x ${i.nombre.toUpperCase().slice(0, 15)} - $${(i.qty * i.precio).toFixed(2)}`
     ).join('\n');
     
-    // 2. Usamos 'cashReceived' que es tu estado local del input
+    // 2. Cálculos de efectivo y cambio
     const montoEfectivo = parseFloat(cashReceived) || 0;
     const cambio = montoEfectivo > total ? montoEfectivo - total : 0;
 
-    // Agregamos [DRAWER] al inicio para abrir la caja
+    // Construimos el ticket concatenando el comando al inicio
     const textoTicket = 
-      `[DRAWER]` + 
+      comandoApertura + 
       `Rhytm Oaxaca\n` + 
       `SUCURSAL Centro\n` +
       `--------------------------\n` +
@@ -330,7 +333,7 @@ export default function WaiterPanel() {
       `¡GRACIAS POR SU COMPRA!\n` +
       `${new Date().toLocaleString()}\n\n\n\n`;
 
-    // 3. Esquema RawBT para Android
+    // 3. Generamos el Intent para RawBT en la tablet
     const linkRawBT = "intent:" + encodeURIComponent(textoTicket) + "#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;end;";
     
     window.location.href = linkRawBT;
