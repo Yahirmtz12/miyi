@@ -305,48 +305,28 @@ export default function WaiterPanel() {
 };
 
     // --- IMPRESIÓN Y REDES (CORREGIDO PARA NO ROMPER LA APP) ---
-    const imprimirTicket = async () => {
-        const itemsText = order.map(i =>
-            `${i.qty}x ${i.nombre.toUpperCase().substring(0, 15).padEnd(15)} $${(i.qty * i.precio).toFixed(2).padStart(7)}`
-        ).join('\n');
+   const imprimirTicket = () => {
+    const itemsText = order.map(i => `${i.qty}x ${i.nombre.toUpperCase()} - $${(i.qty * i.precio).toFixed(2)}`).join('\n');
+    
+    // Formateamos el texto del ticket
+    const textoTicket = 
+      `🍗 MR POLLO 🍗\n` +
+      `SUCURSAL ZAACHILA\n` +
+      `--------------------------\n` +
+      `${itemsText}\n` +
+      `--------------------------\n` +
+      `TOTAL: $${total.toFixed(2)}\n` +
+      `EFECTIVO: $${parseFloat(lastSale?.efectivoRecibido || efectivo || 0).toFixed(2)}\n` +
+      `CAMBIO: $${lastSale?.cambio?.toFixed(2) || "0.00"}\n` +
+      `--------------------------\n` +
+      `¡GRACIAS POR SU COMPRA!\n` +
+      `${new Date().toLocaleString()}\n\n\n`;
 
-        const fecha = new Date().toLocaleString();
-
-        // ELIMINADAS vadddriables inexistentes como lastSale.efectivo
-        const textoTicket =
-            `       Rhytm \n` +
-            `      SUCURSAL Oaxaca\n` +
-            `--------------------------------\n` +
-            `${itemsText}\n` +
-            `--------------------------------\n` +
-            `TOTAL:           $${total.toFixed(2).padStart(10)}\n` +
-            `--------------------------------\n` +
-            `    ¡GRACIAS POR SU COMPRA!\n` +
-            `      ${fecha}\n\n\n\n`;
-
-        if (esMovil()) {
-            const linkRawBT = "intent:" + encodeURIComponent(textoTicket) + "#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;end;";
-            window.location.href = linkRawBT;
-        } else {
-            try {
-                if (!qz.websocket.isActive()) await qz.websocket.connect();
-                const config = qz.configs.create("POS-58");
-
-                // Si el mesero SÍ va a cobrar, le volvemos a poner el código de abrir cajón.
-                // Si no quieres que abra cajón, quita el primer objeto (el que dice '1B700032FA')
-                const data = [
-                    { type: 'raw', format: 'hex', data: '1B700032FA' }, // <-- Abre cajón
-                    textoTicket,
-                    '\x1B\x69' // <-- Corta papel
-                ];
-                await qz.print(config, data);
-            } catch (err) {
-                console.error(err);
-                alert("Error al conectar con la impresora QZ Tray");
-            }
-        }
-    };
-
+    // Usamos el esquema "rawbt:text/" que es mucho más estable que base64 para texto simple
+    const linkRawBT = "intent:" + encodeURIComponent(textoTicket) + "#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;end;";
+    
+    window.location.href = linkRawBT;
+  };
     const sendWhatsApp = () => {
         if (!phone || phone.length < 10) return alert("Por favor, ingresa un número de 10 dígitos");
         const cleanPhone = phone.replace(/\D/g, '');

@@ -90,76 +90,28 @@ export default function Sales() {
 
   const total = order.reduce((a, i) => a + i.precio * i.qty, 0);
 
-  const imprimirTicket = async () => {
-    const itemsText = order.map(i =>
-      `${i.qty}x ${i.nombre.toUpperCase().substring(0, 15).padEnd(15)} $${(i.qty * i.precio).toFixed(2).padStart(7)}`
-    ).join('\n');
-
-    const fecha = new Date().toLocaleString();
-
-    // 1. Definimos el ticket de texto
-    const textoTicket =
-      `       Rhytm \n` +
-      `      SUCURSAL Oaxaca\n` +
-      `--------------------------------\n` +
+  const imprimirTicket = () => {
+    const itemsText = order.map(i => `${i.qty}x ${i.nombre.toUpperCase()} - $${(i.qty * i.precio).toFixed(2)}`).join('\n');
+    
+    // Formateamos el texto del ticket
+    const textoTicket = 
+      `🍗 MR POLLO 🍗\n` +
+      `SUCURSAL ZAACHILA\n` +
+      `--------------------------\n` +
       `${itemsText}\n` +
-      `--------------------------------\n` +
-      `TOTAL:           $${total.toFixed(2).padStart(10)}\n` +
-      `EFECTIVO:        $${parseFloat(lastSale?.efectivoRecibido || efectivo || 0).toFixed(2).padStart(10)}\n` +
-      `CAMBIO:          $${lastSale?.cambio?.toFixed(2) || "0.00".padStart(10)}\n` +
-      `--------------------------------\n` +
-      `    ¡GRACIAS POR SU COMPRA!\n` +
-      `      ${fecha}\n\n\n\n`+
-      `       Rhytm \n` +
-      `      SUCURSAL Oaxaca\n` +
-      `--------------------------------\n` +
-      `${itemsText}\n` +
-      `--------------------------------\n` +
-      `TOTAL:           $${total.toFixed(2).padStart(10)}\n` +
-      `EFECTIVO:        $${parseFloat(lastSale?.efectivoRecibido || efectivo || 0).toFixed(2).padStart(10)}\n` +
-      `CAMBIO:          $${lastSale?.cambio?.toFixed(2) || "0.00".padStart(10)}\n` +
-      `--------------------------------\n` +
-      `    ¡GRACIAS POR SU COMPRA!\n` +
-      `      ${fecha}\n\n\n\n`;
+      `--------------------------\n` +
+      `TOTAL: $${total.toFixed(2)}\n` +
+      `EFECTIVO: $${parseFloat(lastSale?.efectivoRecibido || efectivo || 0).toFixed(2)}\n` +
+      `CAMBIO: $${lastSale?.cambio?.toFixed(2) || "0.00"}\n` +
+      `--------------------------\n` +
+      `¡GRACIAS POR SU COMPRA!\n` +
+      `${new Date().toLocaleString()}\n\n\n`;
 
-    if (esMovil()) {
-      // --- LÓGICA TABLET (RawBT) ---
-      // Agregamos el comando de apertura de cajón antes del texto
-      // El código ESC/POS para abrir cajón es: \u001b\u0070\u0000\u0019\u00fa
-      const comandoApertura = "\u001b\u0070\u0000\u0019\u00fa";
-      const linkRawBT = "intent:" + encodeURIComponent(comandoApertura + textoTicket) + "#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;end;";
-      window.location.href = linkRawBT;
-
-    } else {
-      // --- LÓGICA PC (QZ Tray) ---
-      try {
-        if (!qz.websocket.isActive()) {
-          await qz.websocket.connect();
-        }
-
-        const config = qz.configs.create("POS-58");
-
-        // Comandos Hexadecimales para abrir el cajón (ESC p m t1 t2)
-        // 1b 70 00 32 fa es el más común para impresoras chinas como la Welikera
-        const data = [
-          {
-            type: 'raw',
-            format: 'hex',
-            data: '1B700032FA' // Comando para abrir cajón
-          },
-          textoTicket,
-          '\x1B\x69' // Comando extra para corte de papel (si tu impresora tiene cortador)
-        ];
-
-        await qz.print(config, data);
-        showModal("Venta finalizada e impresión enviada", "success");
-      } catch (err) {
-        console.error(err);
-        showModal("Error al conectar con la impresora", "error");
-      }
-    }
+    // Usamos el esquema "rawbt:text/" que es mucho más estable que base64 para texto simple
+    const linkRawBT = "intent:" + encodeURIComponent(textoTicket) + "#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;end;";
+    
+    window.location.href = linkRawBT;
   };
-
   const sendWhatsApp = () => {
     if (!phone || phone.length < 10) return alert("Por favor, ingresa un número de 10 dígitos");
     const cleanPhone = phone.replace(/\D/g, '');
