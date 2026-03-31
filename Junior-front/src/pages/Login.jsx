@@ -172,7 +172,7 @@ export default function Login() {
               <div className="w-1 h-1 rounded-full bg-green-500 animate-pulse" />
               <span>Server Online</span>
             </div>
-            <span>@Rhytm</span>
+            <span>@Rhythm</span>
           </div>
         </div>
       </div>

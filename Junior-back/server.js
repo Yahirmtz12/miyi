@@ -51,7 +51,7 @@ app.use('/api/tables', tableRoutes); // Ruta para Gestión de Mesas
 
 // Ruta prueba
 app.get('/', (req, res) => {
-  res.send('API Rhytm funcionando con Sockets 🔥');
+  res.send('API Rhythm funcionando con Sockets 🔥');
 });
 
 // Escuchar conexiones de Sockets (Opcional, para debug)

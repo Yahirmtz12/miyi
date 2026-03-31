@@ -8,8 +8,8 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: "#C5A473",   // El azul de Rhytm
-        secondary: "#8C6A3B", // El naranja de Rhytm
+        primary: "#C5A473",   // El azul de Rhythm
+        secondary: "#8C6A3B", // El naranja de Rhythm
         dark: "#1f1212",
       },
       fontFamily: {

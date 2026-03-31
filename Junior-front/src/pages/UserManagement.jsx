@@ -158,7 +158,7 @@ export default function UserManagement() {
           </div>
           <div>
             <h1 className="text-xl md:text-3xl font-black uppercase tracking-tight">Usuarios</h1>
-            <p className="text-white/40 text-[10px] md:text-sm italic">Rhytm - Oaxaca</p>
+            <p className="text-white/40 text-[10px] md:text-sm italic">Rhythm - Oaxaca</p>
           </div>
         </div>
 
@@ -434,7 +434,7 @@ export default function UserManagement() {
       )}
 
       <footer className="mt-10 p-10 text-center opacity-10">
-        <p className="text-[10px] font-black uppercase tracking-[0.5em] italic">Staff Only - Rhytm</p>
+        <p className="text-[10px] font-black uppercase tracking-[0.5em] italic">Staff Only - Rhythm</p>
       </footer>
     </div>
   );

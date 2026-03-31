@@ -16,7 +16,7 @@ import IMG_ELECTRO from '../assets/1.png';
 import TARJETA_QR from '../assets/qr2.png';
 import LOGO from '../assets/logo.png';
 
-const tagline = "Descubre tu ritmo, domina la pista y haz que tu evento brille como nunca.";
+const tagline = "Diferentes experiencias en un mismo espacio, conocenos DANZA, EVENTOS SOCIALES, CAFÉ Y MÁS...";
 
 const reviews = [
   { name: "Valeria Gómez", body: "Montaron el vals de mis XV años y fue espectacular. Todos los invitados quedaron fascinados con la coreografía." },
@@ -25,13 +25,13 @@ const reviews = [
   { name: "Familia Hernández", body: "Contratamos el paquete de chambelanes y coreografía para mi hija. Profesionales, puntuales y creativos al 100%." },
 ];
 
-export default function RhytmOaxacaPage() {
+export default function RhythmOaxacaPage() {
   const irALogin = () => { window.location.href = "/login"; };
   const irARegistro = () => { window.location.href = "/register"; };
 
   const handleWhatsappCotizacion = () => {
     const telefono = "9515571964";
-    const mensaje = encodeURIComponent("¡Hola! Me gustaría pedir información sobre las clases y/o coreografías para XV años en Rhytm Oaxaca.");
+    const mensaje = encodeURIComponent("¡Hola! Me gustaría pedir información sobre las clases y/o coreografías para XV años en Rhythm Oaxaca.");
     window.open(`https://wa.me/${telefono}?text=${mensaje}`, '_blank');
   };
 
@@ -44,12 +44,12 @@ export default function RhytmOaxacaPage() {
           <div className="h-16 w-16 md:h-13 md:w-13 rounded-full overflow-hidden bg-[#C5A473] flex items-center justify-center shadow-[0_0_20px_rgba(197,164,115,0.3)]">
             <img
               src={LOGO}
-              alt="Logo Rhytm Oaxaca"
+              alt="Logo Rhythm Oaxaca"
               className="h-full w-full object-cover scale-140"
             />
           </div>
           <div className="text-xl md:text-2xl font-black tracking-widest text-white uppercase">
-            Rhytm <span className="text-[#C5A473]">Oaxaca</span>
+            Rhythm <span className="text-[#C5A473]">Oaxaca</span>
           </div>
         </div>
 
@@ -103,7 +103,7 @@ export default function RhytmOaxacaPage() {
 
           {/* Título con sombra de color (Neon Gold Effect) */}
           <h1 className="text-7xl md:text-[10rem] font-black text-white mb-6 tracking-tighter uppercase leading-none">
-            Rhytm <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#C5A473] via-[#8C6A3B] to-[#C5A473] drop-shadow-[0_0_35px_rgba(197,164,115,0.5)]">
+            Rhythm <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#C5A473] via-[#8C6A3B] to-[#C5A473] drop-shadow-[0_0_35px_rgba(197,164,115,0.5)]">
               Oaxaca
             </span>
           </h1>
@@ -120,29 +120,80 @@ export default function RhytmOaxacaPage() {
 
       {/* SECCIÓN: CLASES Y SERVICIOS */}
       <div className="relative z-10 max-w-7xl mx-auto px-6 py-20">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-black uppercase tracking-tight">Aprende con <span className="text-[#C5A473]">Los Mejores</span></h2>
-          <p className="text-neutral-400 mt-4">Técnica, pasión y los instructores top de la ciudad.</p>
+  <div className="text-center mb-16">
+    <h2 className="text-4xl md:text-5xl font-black uppercase tracking-tight">
+      Aprende con <span className="text-[#C5A473]">Los Mejores</span>
+    </h2>
+    <p className="text-neutral-400 mt-4">Técnica, pasión y los instructores top de la ciudad.</p>
+  </div>
+
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 pt-16">
+    {[
+      { 
+        img: IMG_SALSA, 
+        title: "Escuela Mexoot de Danzas Urbanas", 
+        desc: "Aquí inicia el camino, la educación como raíz del movimiento ¡Toma tu día de clases muestra!",
+        phone: "9516152557"
+      },
+      { 
+        img: IMG_XV, 
+        title: "Eventos Sociales", 
+        desc: "Organización y coreografías para tus momentos especiales.",
+        phone: "9515571964" 
+      },
+      { 
+        img: IMG_ELECTRO, 
+        title: "Ritmos Latinos", 
+        desc: "Lunes a viernes instruye Peligro Gómez, SALSA, BACHATA, CUMBIA , RUEDA DE CASINO Y MAS ..",
+        phone: "9511866782" 
+      },
+      { 
+        img: IMG_ELECTRO, 
+        title: "Danzas Polinesias y Arabe ", 
+        desc: "Belly dance, Ori tahíti ",
+        phone: "9511788635" 
+      },
+      { 
+        img: IMG_ELECTRO, 
+        title: "A-Tempo Café", 
+        desc: "Visitanos y prueba nuestras bebidas",
+        phone: "" 
+      },
+      { 
+        img: IMG_ELECTRO, 
+        title: "WorkShops Equipos y Competencias", 
+        desc: "Buscanos en instagram .. mexxot.mx , ourbeat.battles , xooters.company , guarare.dance.studio ",
+        phone: "" 
+      }
+    ].map((item, i) => (
+      <MagicCard key={i} className="relative bg-neutral-900 border-white/10 rounded-[2rem] p-8 pt-24 text-center flex flex-col items-center justify-between shadow-2xl min-h-[400px]">
+        <img
+          src={item.img}
+          alt={item.title}
+          className="w-full h-48 object-contain absolute -top-12 drop-shadow-[0_20px_20px_rgba(0,0,0,0.8)] hover:scale-110 transition-transform duration-500"
+        />
+        
+        <div className="mt-10 mb-6">
+          <h3 className="text-2xl font-black uppercase tracking-tight text-white">{item.title}</h3>
+          <p className="text-neutral-400 mt-4 font-light text-sm">{item.desc}</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-12">
-          {[
-            { img: IMG_SALSA, title: "Salsa & Bachata", desc: "Aprende desde cero o perfecciona tus vueltas y estilo en pareja con ritmo latino." },
-            { img: IMG_XV, title: "Vals de XV Años", desc: "Coreografías modernas, entradas triunfales y alquiler de chambelanes profesionales." },
-            { img: IMG_ELECTRO, title: "Electro Dance", desc: "Siente el beat. Clases de shuffling, hip-hop y ritmos urbanos con alta energía." }
-          ].map((item, i) => (
-            <MagicCard key={i} className="relative bg-neutral-900 border-white/10 rounded-[2rem] p-8 pt-24 text-center cursor-pointer flex flex-col items-center justify-center shadow-2xl">
-              <img
-                src={item.img}
-                alt={item.title}
-                className="w-full h-48 object-contain absolute -top-12 drop-shadow-[0_20px_20px_rgba(0,0,0,0.8)] hover:scale-110 transition-transform duration-500"
-              />
-              <h3 className="text-2xl font-black uppercase tracking-tight text-white mt-10">{item.title}</h3>
-              <p className="text-neutral-400 mt-4 font-light text-sm">{item.desc}</p>
-            </MagicCard>
-          ))}
-        </div>
-      </div>
+        {/* CONDICIONAL: Oculta el botón para los títulos especificados */}
+        {!['A-Tempo Café', 'WorkShops Equipos y Competencias'].includes(item.title) && (
+          <a
+            href={`https://wa.me/52${item.phone}?text=${encodeURIComponent(`¡Hola! Me interesa información sobre: ${item.title}`)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group flex items-center justify-center gap-2 w-full py-3 bg-[#25D366] hover:bg-[#20ba5a] text-white rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-[0_10px_20px_rgba(37,211,102,0.2)] active:scale-95"
+          >
+            <FaWhatsapp className="text-lg group-hover:scale-125 transition-transform" />
+            Más información
+          </a>
+        )}
+      </MagicCard>
+    ))}
+  </div>
+</div>
 
       {/* SECCIÓN: TESTIMONIOS */}
       <div className="py-20 bg-neutral-900/30 border-y border-white/5 relative z-10 overflow-hidden">
@@ -238,10 +289,10 @@ export default function RhytmOaxacaPage() {
 
           <div className="flex-1 text-center md:text-left z-10">
             <h2 className="text-5xl md:text-7xl font-black mb-4 tracking-tighter uppercase">
-              Alumno <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#C5A473] to-[#8C6A3B]">Rhytm</span>
+              Alumno <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#C5A473] to-[#8C6A3B]">Rhythm</span>
             </h2>
             <p className="text-neutral-400 text-lg mb-8 max-w-md font-light">
-              Obtén acceso a nuestras clases de la semana, unete a nosotros pagando una mensualidad para tus clases favoritas.
+              Bienvenido a llegado la hora de compartir danza
             </p>
             <ShinyButton
               onClick={irARegistro}
@@ -255,7 +306,7 @@ export default function RhytmOaxacaPage() {
             <div className="relative group w-full max-w-[350px]">
               <img
                 src={TARJETA_QR}
-                alt="Credencial Rhytm Oaxaca"
+                alt="Credencial Rhythm Oaxaca"
                 className="relative z-10 w-full drop-shadow-[0_20px_50px_rgba(197,164,115,0.3)] md:rotate-6 group-hover:rotate-0 transition-transform duration-700"
               />
               <BorderBeam size={300} duration={8} colorFrom="#C5A473" colorTo="#8C6A3B" />
@@ -276,7 +327,7 @@ export default function RhytmOaxacaPage() {
 
         <div className="flex flex-col gap-2">
           <p className="text-xs tracking-[0.4em] uppercase font-black text-neutral-400">
-            Rhytm Oaxaca • {new Date().getFullYear()}
+            Rhythm Oaxaca • {new Date().getFullYear()}
           </p>
           <p className="text-[10px] tracking-widest uppercase font-bold text-[#C5A473]">
             Oaxaca de Juárez, México

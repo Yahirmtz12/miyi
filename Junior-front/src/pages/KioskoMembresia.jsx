@@ -94,7 +94,7 @@ export default function MembresiaStaff() {
             </div>
             <div>
               <h1 className="text-xl md:text-3xl font-black uppercase tracking-tight">Asistencias</h1>
-              <p className="text-white/40 text-[10px] md:text-sm italic">Rhytm Oaxaca </p>
+              <p className="text-white/40 text-[10px] md:text-sm italic">Rhythm Oaxaca </p>
             </div>
           </div>
         </div>

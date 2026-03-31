@@ -321,7 +321,7 @@ export default function WaiterPanel() {
     // Construimos el ticket concatenando el comando al inicio
     const textoTicket = 
       comandoApertura + 
-      `Rhytm Oaxaca\n` + 
+      `Rhythm Oaxaca\n` + 
       `SUCURSAL Centro\n` +
       `--------------------------\n` +
       `${itemsText}\n` +
@@ -331,7 +331,7 @@ export default function WaiterPanel() {
       `CAMBIO: $${cambio.toFixed(2)}\n` +
       `--------------------------\n` +
       `¡GRACIAS POR SU COMPRA!\n` +
-      `${new Date().toLocaleString()}\n\n\n\n`;
+      `${new Date().toLocaleString()}\n\n`;
 
     // 3. Generamos el Intent para RawBT en la tablet
     const linkRawBT = "intent:" + encodeURIComponent(textoTicket) + "#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;end;";
@@ -345,7 +345,7 @@ export default function WaiterPanel() {
         const itemsText = order.map(i => `• ${i.qty}x ${i.nombre.toUpperCase()} - $${(i.qty * i.precio).toFixed(2)}`).join('%0A');
 
 
-        const message = `*🍗 Rhytm 🍗*%0A` +
+        const message = `*🍗 Rhythm 🍗*%0A` +
             `*Ticket Digital - Sucursal Centro*%0A` +
             `--------------------------%0A` +
             `${itemsText}%0A` +
@@ -353,7 +353,7 @@ export default function WaiterPanel() {
             `*TOTAL: $${total.toFixed(2)}*%0A` +
             `--------------------------%0A` +
             `¡Gracias por su compra!%0A` +
-            `_Generado por Rhytm _`;
+            `_Generado por Rhythm _`;
         window.open(`https://wa.me/${finalPhone}?text=${message}`, '_blank');
     };
 
@@ -371,7 +371,7 @@ export default function WaiterPanel() {
                             </div>
                             <div>
                                 <h1 className="text-xl md:text-3xl font-black uppercase tracking-tight text-white">Panel Meseros</h1>
-                                <p className="text-white/40 text-[10px] md:text-sm italic">Rhytm - Oaxaca</p>
+                                <p className="text-white/40 text-[10px] md:text-sm italic">Rhythm - Oaxaca</p>
                             </div>
                         </div>
                         <button onClick={() => setIsOrderOpen(true)} className="lg:hidden relative p-3 bg-white/5 rounded-xl border border-white/10">

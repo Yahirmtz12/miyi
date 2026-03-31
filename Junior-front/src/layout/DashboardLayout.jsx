@@ -68,7 +68,7 @@ export default function DashboardLayout() {
 
               {/* Texto del Logo (Ocultable) */}
               <div className={`flex flex-col transition-opacity duration-300 ${(sidebarOpen || hovered) ? "opacity-100" : "lg:opacity-0 pointer-events-none"}`}>
-                <h1 className="text-white text-sm font-black uppercase leading-tight">Rhytm</h1>
+                <h1 className="text-white text-sm font-black uppercase leading-tight">Rhythm</h1>
                 <p className="text-[9px] text-secondary font-bold uppercase tracking-wider">{rol}</p>
               </div>
             </div>
@@ -136,7 +136,7 @@ export default function DashboardLayout() {
         <header className="flex items-center justify-between px-6 py-4 bg-[#1F1F1F] lg:hidden border-b border-white/5">
           <div className="flex items-center gap-3">
             <img src={logoEmpresa} className="w-8 h-8 rounded-full" alt="logo" />
-            <span className="text-white font-black uppercase text-xs">Rhytm</span>
+            <span className="text-white font-black uppercase text-xs">Rhythm</span>
           </div>
           <button
             onClick={() => setSidebarOpen(true)}
