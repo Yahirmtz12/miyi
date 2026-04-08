@@ -89,13 +89,13 @@ export default function MembresiaStaff() {
         // Medio segundo de retraso para que el alumno alcance a ver su nombre
         const autoRegisterTimer = setTimeout(() => {
           handleRegisterAttendance();
-        }, 500);
+        }, 1000);
         return () => clearTimeout(autoRegisterTimer);
       } else if (clientData.status !== "activa") {
         // Si fue RECHAZADO, borramos la pantalla a los 4 segundos para el siguiente alumno
         const autoClearReject = setTimeout(() => {
           resetKiosk();
-        }, 4000);
+        }, 6000);
         return () => clearTimeout(autoClearReject);
       }
     }
@@ -108,7 +108,7 @@ export default function MembresiaStaff() {
       // Si fue EXITOSO, cerramos el modal a los 3 segundos
       const autoCloseSuccess = setTimeout(() => {
         resetKiosk();
-      }, 3000);
+      }, 5000);
       return () => clearTimeout(autoCloseSuccess);
     }
   }, [showModal]);
