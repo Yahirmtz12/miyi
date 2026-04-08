@@ -1,11 +1,12 @@
-import { useState, useEffect, useRef } from "react"; // <-- Agregamos useRef
+import { useState, useEffect, useRef } from "react";
 import { Html5QrcodeScanner } from "html5-qrcode";
 import {
   FiCamera, FiSearch, FiDollarSign,
   FiCalendar, FiHash, FiCreditCard,
-  FiLoader, FiUser, FiCheckCircle, FiX, FiPlus, FiEdit3
-} from "react-icons/fi";
+  FiLoader, FiUser, FiCheckCircle, FiX, FiPlus, FiEdit3, FiPrinter
+} from "react-icons/fi"; // <-- Añadí FiPrinter
 import { API_URL } from "../api";
+import qz from "qz-tray"; // <-- Importamos QZ Tray
 
 export default function MembresiaCaja() {
   const [membershipId, setMembershipId] = useState("");
@@ -23,6 +24,9 @@ export default function MembresiaCaja() {
   const scannerBuffer = useRef("");
   const scannerTimeout = useRef(null);
 
+  // --- DETECTAR MÓVIL ---
+  const esMovil = () => /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
   const calcularFechaDefault = () => {
     const d = new Date();
     d.setDate(d.getDate() + 30);
@@ -32,29 +36,21 @@ export default function MembresiaCaja() {
   // --- OYENTE GLOBAL PARA EL ESCÁNER FÍSICO ---
   useEffect(() => {
     const handleGlobalKeyDown = (e) => {
-      // 1. Si el usuario está escribiendo manualmente en los inputs (Monto, Disciplina, etc),
-      // ignoramos el evento global para no interrumpirlo.
       const activeTag = document.activeElement.tagName;
       if (activeTag === "INPUT" || activeTag === "TEXTAREA") {
         return;
       }
 
-      // 2. Si el escáner manda un "Enter" (finalizó de leer el código)
       if (e.key === "Enter") {
         if (scannerBuffer.current.length >= 5) {
-          // Guardamos lo capturado y disparamos la búsqueda
           setMembershipId(scannerBuffer.current.toUpperCase());
         }
-        scannerBuffer.current = ""; // Limpiamos el buffer
+        scannerBuffer.current = ""; 
         return;
       }
 
-      // 3. Si es una letra o número, lo acumulamos
       if (e.key.length === 1) {
         scannerBuffer.current += e.key;
-
-        // Los escáneres escriben rapidísimo. Si pasan más de 100ms sin teclear,
-        // asumimos que fue un humano tocando teclas por error y limpiamos el buffer.
         clearTimeout(scannerTimeout.current);
         scannerTimeout.current = setTimeout(() => {
           scannerBuffer.current = "";
@@ -99,7 +95,6 @@ export default function MembresiaCaja() {
     return () => clearTimeout(timer);
   }, [membershipId]);
 
-  // Efecto para el escáner de cámara (Html5QrcodeScanner)
   useEffect(() => {
     const scanner = new Html5QrcodeScanner("reader-caja", {
       fps: 10, qrbox: { width: 250, height: 250 },
@@ -126,14 +121,104 @@ export default function MembresiaCaja() {
       });
       const data = await res.json();
       if (res.ok) {
-        setModalData({ ...data, alumno: clientData.nombre });
+        // Guardamos TODOS los datos necesarios para el ticket en modalData
+        setModalData({ 
+          ...data, 
+          alumno: clientData.nombre,
+          montoTicket: montoCobrado,
+          clasesTicket: cantidadClases,
+          disciplinaTicket: disciplina,
+          vencimientoTicket: nuevaFechaVencimiento
+        });
         setShowModal(true);
+        
+        // Limpiamos los campos
         setMembershipId("");
         setClientData(null);
         setDisciplina(""); 
+        setMontoCobrado("");
       }
-    } catch (error) { alert("Error"); }
+    } catch (error) { alert("Error al procesar pago"); }
     finally { setLoading(false); }
+  };
+
+  // --- FUNCIÓN DE IMPRESIÓN DEL TICKET ---
+  const imprimirTicket = async () => {
+    if (!modalData) return;
+
+    const { alumno, montoTicket, clasesTicket, disciplinaTicket, vencimientoTicket } = modalData;
+    const totalNum = parseFloat(montoTicket || 0);
+
+    // Damos formato a los datos del alumno
+    const datosMembresia = 
+      `ALUMNO: ${alumno.substring(0, 22)}\n` +
+      `DISCIPLINA: ${disciplinaTicket || 'General'}\n` +
+      `NUEVAS CLASES: ${clasesTicket}\n` +
+      `VENCE: ${new Date(vencimientoTicket).toLocaleDateString('es-MX')}\n`;
+
+    // --------------------------------------------------------
+    // RUTA 1: TABLET / CELULAR (RawBT)
+    // --------------------------------------------------------
+    if (esMovil()) {
+      const comandoApertura = "\u001b\u0070\u0000\u0019\u00fa";
+      const textoRawBT = 
+        comandoApertura + 
+        `[C]Rhythm Oaxaca\n` + 
+        `[C]SUCURSAL CENTRO\n` +
+        `--------------------------------\n` +
+        `[C]PAGO DE MEMBRESIA\n` +
+        `--------------------------------\n` +
+        `${datosMembresia}` +
+        `--------------------------------\n` +
+        `TOTAL PAGADO:   $${totalNum.toFixed(2).padStart(10)}\n` +
+        `--------------------------------\n` +
+        `[C]¡GRACIAS POR TU PREFERENCIA!\n` +
+        `[C]${new Date().toLocaleString()}\n\n`;
+
+      const intentURL = `intent:${encodeURIComponent(textoRawBT)}#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;end;`;
+      
+      try {
+        window.location.href = intentURL;
+      } catch (e) {
+        alert("Asegúrate de tener instalada la app RawBT Printer en tu tablet.");
+      }
+    } 
+    // --------------------------------------------------------
+    // RUTA 2: COMPUTADORA (QZ Tray)
+    // --------------------------------------------------------
+    else {
+      try {
+        if (!qz.websocket.isActive()) {
+          await qz.websocket.connect();
+        }
+
+        const config = qz.configs.create("POS-58"); 
+
+        const textoQZ = 
+          `          Rhythm Oaxaca\n` + 
+          `         SUCURSAL CENTRO\n` +
+          `--------------------------------\n` +
+          `       PAGO DE MEMBRESIA\n` +
+          `--------------------------------\n` +
+          `${datosMembresia}` +
+          `--------------------------------\n` +
+          `TOTAL PAGADO:   $${totalNum.toFixed(2).padStart(10)}\n` +
+          `--------------------------------\n` +
+          `   ¡GRACIAS POR TU PREFERENCIA!\n` +
+          `   ${new Date().toLocaleString()}\n\n\n`;
+
+        const data = [
+          { type: 'raw', format: 'hex', data: '1B700019FA' }, // Abre el cajón
+          { type: 'raw', format: 'plain', data: textoQZ }
+        ];
+
+        await qz.print(config, data);
+
+      } catch (err) {
+        console.error("Error con QZ Tray:", err);
+        alert("Error al imprimir. Revisa que QZ Tray esté abierto y la impresora conectada.");
+      }
+    }
   };
 
   return (
@@ -160,7 +245,7 @@ export default function MembresiaCaja() {
           {/* SECCIÓN SCANNER (IZQUIERDA) */}
           <section className="space-y-6">
             <div className="bg-[#262626] rounded-[2.5rem] border border-white/10 overflow-hidden shadow-2xl">
-              <div id="reader-caja" className="w-full"></div>
+              <div id="reader-caja" className="w-full pointer-events-none"></div>
             </div>
 
             <div className="relative group">
@@ -303,7 +388,7 @@ export default function MembresiaCaja() {
         </div>
       </main>
 
-      {/* MODAL DE ÉXITO */}
+      {/* MODAL DE ÉXITO CON BOTÓN DE IMPRESIÓN */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
           <div className="bg-[#262626] w-full max-w-md rounded-[2.5rem] border border-white/10 shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
@@ -313,14 +398,30 @@ export default function MembresiaCaja() {
                 <FiX size={20} />
               </button>
             </div>
-            <div className="p-10 text-center space-y-6">
+            <div className="p-8 text-center space-y-6">
               <div className="mx-auto w-20 h-20 bg-secondary/10 rounded-full flex items-center justify-center border border-secondary/20">
                 <FiCheckCircle className="text-secondary" size={40} />
               </div>
-              <p className="text-white/60 font-bold italic uppercase">Membresía de <span className="text-white">"{modalData?.alumno}"</span> actualizada con éxito.</p>
-              <button onClick={() => setShowModal(false)} className="w-full bg-primary text-white font-black py-5 rounded-2xl uppercase tracking-widest text-xs shadow-lg shadow-primary/20 transition-all active:scale-95">
-                Continuar
-              </button>
+              <p className="text-white/60 font-bold italic uppercase">
+                Membresía de <span className="text-white">"{modalData?.alumno}"</span> actualizada con éxito.
+              </p>
+              
+              {/* BOTONES DE ACCIÓN */}
+              <div className="flex flex-col gap-3 pt-2">
+                <button 
+                  onClick={imprimirTicket} 
+                  className="w-full flex items-center justify-center gap-2 bg-secondary text-black font-black py-4 rounded-2xl uppercase tracking-widest text-xs shadow-lg shadow-secondary/20 transition-all active:scale-95 hover:bg-[#D97018]"
+                >
+                  <FiPrinter size={18} />
+                  Imprimir Ticket
+                </button>
+                <button 
+                  onClick={() => setShowModal(false)} 
+                  className="w-full bg-white/5 hover:bg-white/10 text-white font-black py-4 rounded-2xl uppercase tracking-widest text-[10px] transition-all active:scale-95"
+                >
+                  Cerrar y Continuar
+                </button>
+              </div>
             </div>
           </div>
         </div>
