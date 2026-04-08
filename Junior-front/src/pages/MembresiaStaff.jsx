@@ -4,9 +4,9 @@ import {
   FiCamera, FiSearch, FiDollarSign,
   FiCalendar, FiHash, FiCreditCard,
   FiLoader, FiUser, FiCheckCircle, FiX, FiPlus, FiEdit3, FiPrinter
-} from "react-icons/fi"; // <-- Añadí FiPrinter
+} from "react-icons/fi";
 import { API_URL } from "../api";
-import qz from "qz-tray"; // <-- Importamos QZ Tray
+import qz from "qz-tray"; 
 
 export default function MembresiaCaja() {
   const [membershipId, setMembershipId] = useState("");
@@ -20,11 +20,9 @@ export default function MembresiaCaja() {
   const [showModal, setShowModal] = useState(false);
   const [modalData, setModalData] = useState(null);
 
-  // --- REFERENCIAS PARA EL ESCÁNER FÍSICO ---
   const scannerBuffer = useRef("");
   const scannerTimeout = useRef(null);
 
-  // --- DETECTAR MÓVIL ---
   const esMovil = () => /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
   const calcularFechaDefault = () => {
@@ -33,36 +31,76 @@ export default function MembresiaCaja() {
     return d.toISOString().split('T')[0];
   };
 
-  // --- OYENTE GLOBAL PARA EL ESCÁNER FÍSICO ---
+  // --- 1. OYENTE GLOBAL REFINADO PARA ESCÁNER FÍSICO ---
   useEffect(() => {
     const handleGlobalKeyDown = (e) => {
-      const activeTag = document.activeElement.tagName;
-      if (activeTag === "INPUT" || activeTag === "TEXTAREA") {
+      const activeElement = document.activeElement;
+      const isInput = activeElement.tagName === "INPUT" || activeElement.tagName === "TEXTAREA";
+
+      // Permitir borrar, navegar o si está escribiendo en un input, no interferir
+      if (isInput || e.key === "Backspace" || e.key.length > 1 && e.key !== "Enter") {
         return;
       }
 
       if (e.key === "Enter") {
         if (scannerBuffer.current.length >= 5) {
+          // Actualizamos el estado con lo que leyó la pistola
           setMembershipId(scannerBuffer.current.toUpperCase());
         }
         scannerBuffer.current = ""; 
         return;
       }
 
-      if (e.key.length === 1) {
+      // Evitamos capturar comandos raros
+      if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
         scannerBuffer.current += e.key;
         clearTimeout(scannerTimeout.current);
         scannerTimeout.current = setTimeout(() => {
           scannerBuffer.current = "";
-        }, 150);
+        }, 100); // 100ms es muy estricto, ideal para pistolas láser
       }
     };
 
     window.addEventListener("keydown", handleGlobalKeyDown);
-    return () => window.removeEventListener("keydown", handleGlobalKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleGlobalKeyDown);
+      clearTimeout(scannerTimeout.current);
+    };
   }, []);
-  // ---------------------------------------------
 
+  // --- 2. ESCÁNER DE CÁMARA (Html5QrcodeScanner) ARREGLADO ---
+  useEffect(() => {
+    // Retrasamos un poco la inicialización para asegurar que el DOM cargó
+    const timer = setTimeout(() => {
+      const scanner = new Html5QrcodeScanner("reader-caja", {
+        fps: 10,
+        qrbox: { width: 250, height: 250 },
+        // Evitamos que intente usar formatos raros que puedan crashear
+        formatsToSupport: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15] 
+      }, false); // El false al final es importante para no verbosity
+
+      scanner.render(
+        (result) => {
+          // Cuando la cámara lee algo, pausamos el escáner para no leer doble
+          scanner.pause(true);
+          setMembershipId(result.toUpperCase());
+          // Lo reanudamos después de un ratito
+          setTimeout(() => { if (scanner.getState() === 2) scanner.resume(); }, 2000);
+        },
+        (error) => {
+          // Ignoramos los errores constantes de "no se encontró código"
+        }
+      );
+
+      return () => {
+        scanner.clear().catch(err => console.error("Error limpiando scanner:", err));
+      };
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  // --- 3. BÚSQUEDA DEL CLIENTE AL CAMBIAR membershipId ---
   useEffect(() => {
     const fetchClientInfo = async () => {
       if (membershipId.length >= 5) {
@@ -82,7 +120,7 @@ export default function MembresiaCaja() {
             setDisciplina("");
           }
         } catch (error) { 
-          console.error("Error"); 
+          console.error("Error al buscar cliente"); 
         } finally { 
           setSearchingClient(false); 
         }
@@ -91,17 +129,11 @@ export default function MembresiaCaja() {
         setDisciplina("");
       }
     };
-    const timer = setTimeout(fetchClientInfo, 500);
+    
+    // Pequeño debounce para no saturar el servidor si escriben a mano
+    const timer = setTimeout(fetchClientInfo, 300);
     return () => clearTimeout(timer);
   }, [membershipId]);
-
-  useEffect(() => {
-    const scanner = new Html5QrcodeScanner("reader-caja", {
-      fps: 10, qrbox: { width: 250, height: 250 },
-    });
-    scanner.render((result) => setMembershipId(result.toUpperCase()), () => { });
-    return () => scanner.clear().catch(err => console.error(err));
-  }, []);
 
   const handleRenewMembership = async (e) => {
     if (e) e.preventDefault();
@@ -121,7 +153,6 @@ export default function MembresiaCaja() {
       });
       const data = await res.json();
       if (res.ok) {
-        // Guardamos TODOS los datos necesarios para el ticket en modalData
         setModalData({ 
           ...data, 
           alumno: clientData.nombre,
@@ -132,33 +163,32 @@ export default function MembresiaCaja() {
         });
         setShowModal(true);
         
-        // Limpiamos los campos
         setMembershipId("");
         setClientData(null);
         setDisciplina(""); 
         setMontoCobrado("");
+      } else {
+        // Mostrar mensaje si el backend devuelve error (ej. 403)
+        alert(data.msg || "Error al procesar pago");
       }
-    } catch (error) { alert("Error al procesar pago"); }
+    } catch (error) { 
+      alert("Error de conexión al procesar el pago"); 
+    }
     finally { setLoading(false); }
   };
 
-  // --- FUNCIÓN DE IMPRESIÓN DEL TICKET ---
   const imprimirTicket = async () => {
     if (!modalData) return;
 
     const { alumno, montoTicket, clasesTicket, disciplinaTicket, vencimientoTicket } = modalData;
     const totalNum = parseFloat(montoTicket || 0);
 
-    // Damos formato a los datos del alumno
     const datosMembresia = 
       `ALUMNO: ${alumno.substring(0, 22)}\n` +
       `DISCIPLINA: ${disciplinaTicket || 'General'}\n` +
       `NUEVAS CLASES: ${clasesTicket}\n` +
       `VENCE: ${new Date(vencimientoTicket).toLocaleDateString('es-MX')}\n`;
 
-    // --------------------------------------------------------
-    // RUTA 1: TABLET / CELULAR (RawBT)
-    // --------------------------------------------------------
     if (esMovil()) {
       const comandoApertura = "\u001b\u0070\u0000\u0019\u00fa";
       const textoRawBT = 
@@ -182,11 +212,7 @@ export default function MembresiaCaja() {
       } catch (e) {
         alert("Asegúrate de tener instalada la app RawBT Printer en tu tablet.");
       }
-    } 
-    // --------------------------------------------------------
-    // RUTA 2: COMPUTADORA (QZ Tray)
-    // --------------------------------------------------------
-    else {
+    } else {
       try {
         if (!qz.websocket.isActive()) {
           await qz.websocket.connect();
@@ -208,7 +234,7 @@ export default function MembresiaCaja() {
           `   ${new Date().toLocaleString()}\n\n\n`;
 
         const data = [
-          { type: 'raw', format: 'hex', data: '1B700019FA' }, // Abre el cajón
+          { type: 'raw', format: 'hex', data: '1B700019FA' }, 
           { type: 'raw', format: 'plain', data: textoQZ }
         ];
 
@@ -245,7 +271,8 @@ export default function MembresiaCaja() {
           {/* SECCIÓN SCANNER (IZQUIERDA) */}
           <section className="space-y-6">
             <div className="bg-[#262626] rounded-[2.5rem] border border-white/10 overflow-hidden shadow-2xl">
-              <div id="reader-caja" className="w-full pointer-events-none"></div>
+              {/* Le quitamos el pointer-events-none para que se pueda interactuar con la cámara */}
+              <div id="reader-caja" className="w-full"></div>
             </div>
 
             <div className="relative group">
@@ -406,7 +433,6 @@ export default function MembresiaCaja() {
                 Membresía de <span className="text-white">"{modalData?.alumno}"</span> actualizada con éxito.
               </p>
               
-              {/* BOTONES DE ACCIÓN */}
               <div className="flex flex-col gap-3 pt-2">
                 <button 
                   onClick={imprimirTicket} 
