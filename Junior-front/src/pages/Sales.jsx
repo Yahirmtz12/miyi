@@ -26,7 +26,7 @@ export default function Sales() {
   const [lastSale, setLastSale] = useState(null);
   const [phone, setPhone] = useState("");
   const [showOrderMobile, setShowOrderMobile] = useState(false);
-  const [discount, setDiscount] = useState(0); // NUEVO ESTADO PARA DESCUENTO
+  const [discount, setDiscount] = useState(0); 
   const [isProcessing, setIsProcessing] = useState(false);
   
   const esMovil = () => /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
@@ -56,13 +56,13 @@ export default function Sales() {
     }
   };
 
-  // Función unificada para cerrar el modal y resetear estado
   const handleCloseModal = () => {
     if (modal.tipo === "success") {
       setOrder([]);
+      setEfectivo(""); // Reseteamos efectivo aquí también por seguridad
       setPhone("");
       setSearchTerm("");
-      setDiscount(0); // RESETEAR DESCUENTO
+      setDiscount(0); 
     }
     setModal({ ...modal, open: false });
   };
@@ -92,10 +92,13 @@ export default function Sales() {
     );
   };
 
-  // NUEVOS CÁLCULOS DE TOTALES
+  // CÁLCULOS DE TOTALES
   const subtotal = order.reduce((a, i) => a + i.precio * i.qty, 0);
   const discountAmount = (subtotal * discount) / 100;
   const total = subtotal - discountAmount;
+  
+  // Constante útil para las validaciones del botón y el input
+  const montoRecibido = parseFloat(efectivo) || 0;
 
   const imprimirTicket = () => {
     const comandoApertura = "\u001b\u0070\u0000\u0019\u00fa";
@@ -104,9 +107,8 @@ export default function Sales() {
       `${i.qty}x ${i.nombre.toUpperCase().padEnd(12)} $${(i.qty * i.precio).toFixed(2).padStart(7)}`
     ).join('\n');
     
-    // Calculamos el cambio localmente para que cuadre con el descuento en el ticket
-    const efectivoRecibido = parseFloat(lastSale?.efectivoRecibido || efectivo || 0);
-    const cambio = efectivoRecibido > total ? efectivoRecibido - total : 0;
+    const efectivoReal = parseFloat(lastSale?.efectivoRecibido || efectivo || 0);
+    const cambio = efectivoReal > total ? efectivoReal - total : 0;
 
     const textoTicket = 
       comandoApertura + 
@@ -118,7 +120,7 @@ export default function Sales() {
       `SUBTOTAL:       $${subtotal.toFixed(2).padStart(10)}\n` +
       (discount > 0 ? `DESCUENTO (${discount}%):-$${discountAmount.toFixed(2).padStart(10)}\n` : "") +
       `TOTAL:          $${total.toFixed(2).padStart(10)}\n` +
-      `EFECTIVO:       $${efectivoRecibido.toFixed(2).padStart(10)}\n` +
+      `EFECTIVO:       $${efectivoReal.toFixed(2).padStart(10)}\n` +
       `CAMBIO:         $${cambio.toFixed(2).padStart(10)}\n` +
       `--------------------------------\n` +
       `[C]¡GRACIAS POR SU COMPRA!\n` +
@@ -140,8 +142,8 @@ export default function Sales() {
     const finalPhone = cleanPhone.length === 10 ? `52${cleanPhone}` : cleanPhone;
     const itemsText = order.map(i => `• ${i.qty}x ${i.nombre.toUpperCase()} - $${(i.qty * i.precio).toFixed(2)}`).join('%0A');
     
-    const efectivoRecibido = parseFloat(lastSale?.efectivoRecibido || efectivo || 0);
-    const cambio = efectivoRecibido > total ? efectivoRecibido - total : 0;
+    const efectivoReal = parseFloat(lastSale?.efectivoRecibido || efectivo || 0);
+    const cambio = efectivoReal > total ? efectivoReal - total : 0;
 
     let message = `*🍗 Rhythm 🍗*%0A` + 
       `*Ticket Digital - Sucursal Oaxaca*%0A` + 
@@ -155,7 +157,7 @@ export default function Sales() {
     }
 
     message += `*TOTAL: $${total.toFixed(2)}*%0A` + 
-      `Efectivo: $${efectivoRecibido.toFixed(2)}%0A` + 
+      `Efectivo: $${efectivoReal.toFixed(2)}%0A` + 
       `Cambio: $${cambio.toFixed(2)}%0A` + 
       `--------------------------%0A` + 
       `¡Gracias por su compra!%0A` + 
@@ -165,11 +167,8 @@ export default function Sales() {
   };
 
   const handlePagar = async () => {
-    const efectivoRecibido = parseFloat(efectivo);
-    
-    if (!efectivoRecibido || efectivoRecibido < total) {
-      return showModal("Efectivo insuficiente", "error");
-    }
+    // Doble validación por si lo intentan forzar con la tecla Enter
+    if (order.length === 0 || montoRecibido < total || isProcessing) return;
 
     setIsProcessing(true); 
 
@@ -188,7 +187,7 @@ export default function Sales() {
             cantidad: item.qty, 
             precio: item.precio 
           })),
-          efectivoRecibido
+          efectivoRecibido: montoRecibido // Usamos montoRecibido validado
         })
       });
 
@@ -199,10 +198,9 @@ export default function Sales() {
       }
 
       setLastSale(data.sale);
-      // Usamos el cambio calculado localmente con el descuento
-      const cambioReal = efectivoRecibido - total;
+      const cambioReal = montoRecibido - total;
       showModal(`Venta exitosa\nCambio: $${cambioReal.toFixed(2)}`, "success");
-      setEfectivo("");
+      
       if (window.innerWidth < 1024) setShowOrderMobile(false);
 
     } catch (err) {
@@ -351,7 +349,8 @@ export default function Sales() {
           </div>
           <button
             type="button"
-            disabled={order.length === 0 || !efectivo || isProcessing}
+            // VALIDACIÓN ESTRICTA: El botón se desactiva si el monto es menor al Total
+            disabled={order.length === 0 || montoRecibido < total || isProcessing}
             onClick={handlePagar}
             className="group relative w-full h-14 md:h-16 bg-primary text-white rounded-2xl font-black text-lg md:text-xl shadow-lg active:scale-95 disabled:opacity-50 disabled:bg-white/5 disabled:text-white/20 overflow-hidden uppercase tracking-tighter italic transition-all"
           >
