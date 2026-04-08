@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   FiShield, FiUserPlus, FiRefreshCw, FiX, FiUser,
-  FiLock, FiEdit3, FiTrash2, FiAlertTriangle
+  FiLock, FiEdit3, FiTrash2, FiAlertTriangle, FiEye, FiCalendar, FiActivity
 } from "react-icons/fi";
 import { API_URL } from "../api";
 
@@ -18,6 +18,11 @@ export default function UserManagement() {
   const [userToDelete, setUserToDelete] = useState(null);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [userToEditPassword, setUserToEditPassword] = useState(null);
+  
+  // NUEVO: Estado para ver datos del cliente
+  const [showClientModal, setShowClientModal] = useState(false);
+  const [selectedClient, setSelectedClient] = useState(null);
+  
   const [newPassword, setNewPassword] = useState("");
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
 
@@ -39,12 +44,12 @@ export default function UserManagement() {
       const data = await res.json();
 
       if (Array.isArray(data)) {
-        // FILTRO DE SEGURIDAD: Eliminamos al Super Admin de la lista antes de guardarla
         const filteredUsers = data.filter(u => u.usuario !== SUPER_ADMIN_USER);
         setUsers(filteredUsers);
       }
     } catch (err) { console.error("Error al obtener usuarios:", err); }
   };
+
   const handlePasswordChange = async (e) => {
     e.preventDefault();
     if (!newPassword || newPassword.length < 4) {
@@ -73,6 +78,7 @@ export default function UserManagement() {
       setErrorMsg("Error de conexión");
     }
   };
+
   const handleRegister = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -107,7 +113,7 @@ export default function UserManagement() {
   };
 
   const handleToggleRol = async (userId, currentRol) => {
-    const rolesEmpleado = ["admin", "cajero", "cocinero", "mesero"];
+    const rolesEmpleado = ["admin", "cajero", "cocinero", "mesero", "kiosko"];
     const currentIndex = rolesEmpleado.indexOf(currentRol);
 
     if (currentIndex === -1) return;
@@ -167,10 +173,10 @@ export default function UserManagement() {
             setErrorMsg("");
             setShowRegisterModal(true);
           }}
-          className="flex items-center justify-center gap-2 bg-primary hover:bg-primary text-white font-black py-4 px-6 rounded-2xl transition-all shadow-xl shadow-primary/20 active:scale-95 uppercase text-xs tracking-widest"
+          className="flex items-center justify-center gap-2 bg-primary hover:bg-[#00205B] text-white font-black py-4 px-6 rounded-2xl transition-all shadow-xl shadow-primary/20 active:scale-95 uppercase text-xs tracking-widest"
         >
           <FiUserPlus className="w-5 h-5" />
-          Nuevo Empleado
+          Nuevo Usuario
         </button>
       </header>
 
@@ -194,8 +200,6 @@ export default function UserManagement() {
               {users.map((u) => {
                 const esCliente = u.rol === 'cliente';
                 const esYoMismo = u.usuario === currentUser.usuario;
-
-                // CONDICIÓN: No se puede cambiar rol si es cliente o si soy yo mismo
                 const puedeActualizarRol = !esCliente && !esYoMismo;
 
                 return (
@@ -212,16 +216,31 @@ export default function UserManagement() {
                     <td className="px-8 py-5 text-center">
                       <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase border tracking-widest ${u.rol === 'admin' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
                         u.rol === 'cajero' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
-                          u.rol === 'cocinero' ? 'bg-orange-500/10 text-orange-400 border-orange-500/20' :
-                            u.rol === 'mesero' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
-                              u.rol === 'kiosko' ? 'bg-red-500/10 text-green-400 border-green-500/20' :
-                                'bg-gray-500/10 text-gray-400 border-gray-500/20'
+                          u.rol === 'cliente' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' :
+                            u.rol === 'cocinero' ? 'bg-orange-500/10 text-orange-400 border-orange-500/20' :
+                              u.rol === 'mesero' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
+                                u.rol === 'kiosko' ? 'bg-red-500/10 text-green-400 border-green-500/20' :
+                                  'bg-gray-500/10 text-gray-400 border-gray-500/20'
                         }`}>
                         {u.rol}
                       </span>
                     </td>
                     <td className="px-8 py-5 text-center">
                       <div className="flex justify-center gap-2">
+                        {/* NUEVO BOTÓN PARA VER DATOS SI ES CLIENTE */}
+                        {esCliente && (
+                          <button
+                            onClick={() => {
+                              setSelectedClient(u);
+                              setShowClientModal(true);
+                            }}
+                            className="p-3 bg-white/5 hover:bg-purple-500 text-white rounded-xl transition-all border border-white/5 active:scale-90"
+                            title="Ver Membresía"
+                          >
+                            <FiEye className="w-5 h-5" />
+                          </button>
+                        )}
+
                         <button
                           onClick={() => {
                             setUserToEditPassword(u);
@@ -268,13 +287,29 @@ export default function UserManagement() {
                   <div className="flex flex-col min-w-0">
                     <h3 className="text-white font-bold text-sm leading-none truncate italic">{u.nombre || "Sin Nombre"}</h3>
                     <span className="text-white/30 text-[10px] font-mono mt-1">@{u.usuario}</span>
-                    <span className={`w-fit mt-2 px-2 py-0.5 rounded text-[8px] font-black uppercase border tracking-widest ${u.rol === 'admin' ? 'text-red-500 border-red-500/20' : 'text-blue-400 border-blue-500/20'
-                      }`}>
+                    <span className={`w-fit mt-2 px-2 py-0.5 rounded text-[8px] font-black uppercase border tracking-widest ${
+                      u.rol === 'admin' ? 'text-red-500 border-red-500/20' : 
+                      u.rol === 'cliente' ? 'text-purple-400 border-purple-500/20' : 
+                      'text-blue-400 border-blue-500/20'
+                    }`}>
                       {u.rol}
                     </span>
                   </div>
                 </div>
                 <div className="flex flex-col gap-2 shrink-0">
+                   {/* NUEVO BOTÓN MÓVIL PARA CLIENTES */}
+                   {esCliente && (
+                    <button
+                      onClick={() => {
+                        setSelectedClient(u);
+                        setShowClientModal(true);
+                      }}
+                      className="p-3.5 bg-white/5 text-purple-400 rounded-2xl border border-white/10 active:scale-90 transition-transform"
+                    >
+                      <FiEye className="w-5 h-5" />
+                    </button>
+                  )}
+
                   <button
                     onClick={() => {
                       setUserToEditPassword(u);
@@ -301,6 +336,64 @@ export default function UserManagement() {
           })}
         </div>
       </main>
+
+      {/* MODAL DETALLES DEL CLIENTE (NUEVO) */}
+      {showClientModal && selectedClient && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <div className="bg-[#1F1F1F] w-full max-w-sm rounded-[2.5rem] border border-white/10 shadow-2xl overflow-hidden animate-in zoom-in duration-300">
+            <div className="p-6 flex justify-between items-center border-b border-white/5 bg-black/20">
+              <h3 className="text-lg font-black text-white uppercase tracking-tighter italic">Datos de Membresía</h3>
+              <button onClick={() => setShowClientModal(false)} className="p-2 bg-white/5 rounded-full text-white/40 hover:text-white transition">
+                <FiX className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-8 space-y-6">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-purple-500/10 rounded-full flex items-center justify-center mx-auto border border-purple-500/20 mb-3">
+                  <FiUser className="text-purple-400 w-8 h-8" />
+                </div>
+                <h4 className="text-xl font-black uppercase text-white">{selectedClient.nombre}</h4>
+                <p className="text-xs text-white/40 font-mono mt-1">{selectedClient.membershipId || "Sin ID asignado"}</p>
+              </div>
+
+              <div className="space-y-3">
+                <div className="bg-black/40 p-4 rounded-2xl border border-white/5 flex items-center gap-4">
+                  <FiEdit3 className="text-primary w-5 h-5" />
+                  <div>
+                    <p className="text-[9px] uppercase tracking-widest text-white/40 font-black">Disciplina</p>
+                    <p className="text-sm text-white font-bold">{selectedClient.disciplina || "No inscrita"}</p>
+                  </div>
+                </div>
+
+                <div className="bg-black/40 p-4 rounded-2xl border border-white/5 flex items-center gap-4">
+                  <FiActivity className="text-secondary w-5 h-5" />
+                  <div>
+                    <p className="text-[9px] uppercase tracking-widest text-white/40 font-black">Clases Disponibles</p>
+                    <p className="text-xl text-white font-black">{selectedClient.clasesDisponibles || 0}</p>
+                  </div>
+                </div>
+
+                <div className="bg-black/40 p-4 rounded-2xl border border-white/5 flex items-center gap-4">
+                  <FiCalendar className="text-green-400 w-5 h-5" />
+                  <div>
+                    <p className="text-[9px] uppercase tracking-widest text-white/40 font-black">Vencimiento</p>
+                    <p className="text-sm text-white font-bold">
+                      {selectedClient.fechaVencimiento 
+                        ? new Date(selectedClient.fechaVencimiento).toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' }) 
+                        : "Sin fecha activa"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <button onClick={() => setShowClientModal(false)} className="w-full bg-white/5 hover:bg-white/10 text-white font-black py-4 rounded-[1.5rem] transition shadow-xl uppercase text-[10px] tracking-widest">
+                Cerrar Ventana
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* MODAL REGISTRO */}
       {showRegisterModal && (
@@ -362,12 +455,13 @@ export default function UserManagement() {
               </div>
 
               <button type="submit" disabled={loading} className="w-full bg-primary hover:bg-[#00205B] text-white font-black py-5 rounded-[1.5rem] transition shadow-xl shadow-primary/20 mt-4 disabled:opacity-50 tracking-widest uppercase text-xs">
-                {loading ? "PROCESANDO..." : "REGISTRAR EMPLEADO"}
+                {loading ? "PROCESANDO..." : "REGISTRAR USUARIO"}
               </button>
             </form>
           </div>
         </div>
       )}
+
       {/* MODAL CAMBIAR CONTRASEÑA */}
       {showPasswordModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
@@ -408,6 +502,7 @@ export default function UserManagement() {
           </div>
         </div>
       )}
+
       {/* MODAL ELIMINACIÓN */}
       {showDeleteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm">
