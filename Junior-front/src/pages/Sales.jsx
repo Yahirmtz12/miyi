@@ -26,9 +26,12 @@ export default function Sales() {
   const [lastSale, setLastSale] = useState(null);
   const [phone, setPhone] = useState("");
   const [showOrderMobile, setShowOrderMobile] = useState(false);
-  const esMovil = () => /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-  const quickFilters = ["COMBO","Café","Tes","Infucion","Adicionales"];
+  const [discount, setDiscount] = useState(0); // NUEVO ESTADO PARA DESCUENTO
   const [isProcessing, setIsProcessing] = useState(false);
+  
+  const esMovil = () => /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const quickFilters = ["COMBO", "Café", "Tes", "Infucion", "Adicionales"];
+
   useEffect(() => {
     const token = localStorage.getItem("token");
     fetch(`${API_URL}/api/products`, {
@@ -59,6 +62,7 @@ export default function Sales() {
       setOrder([]);
       setPhone("");
       setSearchTerm("");
+      setDiscount(0); // RESETEAR DESCUENTO
     }
     setModal({ ...modal, open: false });
   };
@@ -88,17 +92,22 @@ export default function Sales() {
     );
   };
 
-  const total = order.reduce((a, i) => a + i.precio * i.qty, 0);
+  // NUEVOS CÁLCULOS DE TOTALES
+  const subtotal = order.reduce((a, i) => a + i.precio * i.qty, 0);
+  const discountAmount = (subtotal * discount) / 100;
+  const total = subtotal - discountAmount;
 
   const imprimirTicket = () => {
-    // El comando ESC/POS puro que mencionas (Apertura de cajón)
     const comandoApertura = "\u001b\u0070\u0000\u0019\u00fa";
 
     const itemsText = order.map(i => 
       `${i.qty}x ${i.nombre.toUpperCase().padEnd(12)} $${(i.qty * i.precio).toFixed(2).padStart(7)}`
     ).join('\n');
     
-    // Concatenamos el comando al inicio del texto del ticket
+    // Calculamos el cambio localmente para que cuadre con el descuento en el ticket
+    const efectivoRecibido = parseFloat(lastSale?.efectivoRecibido || efectivo || 0);
+    const cambio = efectivoRecibido > total ? efectivoRecibido - total : 0;
+
     const textoTicket = 
       comandoApertura + 
       `[C]Rhythm Oaxaca\n` + 
@@ -106,14 +115,15 @@ export default function Sales() {
       `--------------------------------\n` +
       `${itemsText}\n` +
       `--------------------------------\n` +
+      `SUBTOTAL:       $${subtotal.toFixed(2).padStart(10)}\n` +
+      (discount > 0 ? `DESCUENTO (${discount}%):-$${discountAmount.toFixed(2).padStart(10)}\n` : "") +
       `TOTAL:          $${total.toFixed(2).padStart(10)}\n` +
-      `EFECTIVO:       $${parseFloat(lastSale?.efectivoRecibido || efectivo || 0).toFixed(2).padStart(10)}\n` +
-      `CAMBIO:         $${(lastSale?.cambio || 0).toFixed(2).padStart(10)}\n` +
+      `EFECTIVO:       $${efectivoRecibido.toFixed(2).padStart(10)}\n` +
+      `CAMBIO:         $${cambio.toFixed(2).padStart(10)}\n` +
       `--------------------------------\n` +
       `[C]¡GRACIAS POR SU COMPRA!\n` +
       `[C]${new Date().toLocaleString()}\n\n`;
 
-    // CONSTRUCCIÓN DEL INTENT PARA ANDROID
     const encodedText = encodeURIComponent(textoTicket);
     const intentURL = `intent:${encodedText}#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;end;`;
 
@@ -122,25 +132,46 @@ export default function Sales() {
     } catch (e) {
       alert("Asegúrate de tener instalada la app RawBT Printer en tu tablet.");
     }
-};
+  };
+
   const sendWhatsApp = () => {
     if (!phone || phone.length < 10) return alert("Por favor, ingresa un número de 10 dígitos");
     const cleanPhone = phone.replace(/\D/g, '');
-    const finalPhone = cleanPhone.length === 10 ? `521${cleanPhone}` : cleanPhone;
+    const finalPhone = cleanPhone.length === 10 ? `52${cleanPhone}` : cleanPhone;
     const itemsText = order.map(i => `• ${i.qty}x ${i.nombre.toUpperCase()} - $${(i.qty * i.precio).toFixed(2)}`).join('%0A');
-    const message = `*🍗 Rhythm 🍗*%0A` + `*Ticket Digital - Sucursal Oaxaca*%0A` + `--------------------------%0A` + `${itemsText}%0A` + `--------------------------%0A` + `*TOTAL: $${total.toFixed(2)}*%0A` + `Efectivo: $${parseFloat(lastSale.efectivoRecibido).toFixed(2)}%0A` + `Cambio: $${lastSale.cambio.toFixed(2)}%0A` + `--------------------------%0A` + `¡Gracias por su compra!%0A` + `_Generado por Rhythm _`;
+    
+    const efectivoRecibido = parseFloat(lastSale?.efectivoRecibido || efectivo || 0);
+    const cambio = efectivoRecibido > total ? efectivoRecibido - total : 0;
+
+    let message = `*🍗 Rhythm 🍗*%0A` + 
+      `*Ticket Digital - Sucursal Oaxaca*%0A` + 
+      `--------------------------%0A` + 
+      `${itemsText}%0A` + 
+      `--------------------------%0A` + 
+      `Subtotal: $${subtotal.toFixed(2)}%0A`;
+      
+    if (discount > 0) {
+      message += `Descuento (${discount}%): -$${discountAmount.toFixed(2)}%0A`;
+    }
+
+    message += `*TOTAL: $${total.toFixed(2)}*%0A` + 
+      `Efectivo: $${efectivoRecibido.toFixed(2)}%0A` + 
+      `Cambio: $${cambio.toFixed(2)}%0A` + 
+      `--------------------------%0A` + 
+      `¡Gracias por su compra!%0A` + 
+      `_Generado por Rhythm _`;
+      
     window.open(`https://wa.me/${finalPhone}?text=${message}`, '_blank');
   };
 
   const handlePagar = async () => {
     const efectivoRecibido = parseFloat(efectivo);
     
-    // Validación inicial
     if (!efectivoRecibido || efectivoRecibido < total) {
       return showModal("Efectivo insuficiente", "error");
     }
 
-    setIsProcessing(true); // 1. Bloqueamos el botón y mostramos "Validando..."
+    setIsProcessing(true); 
 
     try {
       const token = localStorage.getItem("token");
@@ -164,22 +195,19 @@ export default function Sales() {
       const data = await response.json();
 
       if (!response.ok) {
-        // Si el servidor responde con error (ej. 400 o 500)
         throw new Error(data.msg || "Error al procesar la venta");
       }
 
-      // Si todo sale bien
       setLastSale(data.sale);
-      showModal(`Venta exitosa\nCambio: $${data.sale.cambio.toFixed(2)}`, "success");
+      // Usamos el cambio calculado localmente con el descuento
+      const cambioReal = efectivoRecibido - total;
+      showModal(`Venta exitosa\nCambio: $${cambioReal.toFixed(2)}`, "success");
       setEfectivo("");
       if (window.innerWidth < 1024) setShowOrderMobile(false);
 
     } catch (err) {
-      // 2. Si hay error de red o el "throw" de arriba se activa
       showModal(err.message, "error");
     } finally {
-      // 3. ESTO ES LO MÁS IMPORTANTE: 
-      // Se ejecuta siempre, devolviendo el botón a "Finalizar Venta"
       setIsProcessing(false); 
     }
   };
@@ -280,7 +308,36 @@ export default function Sales() {
         </div>
 
         <div className="p-6 md:p-8 bg-black/60 border-t border-white/10 space-y-4 md:space-y-6 shrink-0 pb-10 lg:pb-8">
-          <div className="flex justify-between items-end"><span className="text-white font-black text-lg md:text-xl uppercase italic">Total</span><span className="text-3xl md:text-4xl font-black text-secondary tracking-tighter">${total.toFixed(2)}</span></div>
+          
+          {/* BOTONES DE DESCUENTO */}
+          {order.length > 0 && (
+            <div className="px-2 flex items-center justify-between gap-4 mb-2">
+              <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Descuento (%)</span>
+              <div className="flex gap-1 bg-white/5 p-1 rounded-xl border border-white/10">
+                {[0, 5, 10, 15, 20].map(val => (
+                  <button 
+                    key={val} 
+                    onClick={() => setDiscount(val)}
+                    className={`px-3 py-1.5 rounded-lg text-[10px] font-black transition-all ${discount === val ? "bg-secondary text-black shadow-md" : "text-white/40 hover:text-white"}`}
+                  >
+                    {val}%
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="flex justify-between items-end px-2">
+            <div className="flex flex-col">
+              {discount > 0 && (
+                <span className="text-white/40 font-black text-[10px] uppercase tracking-widest line-through">
+                  Subtotal: ${subtotal.toFixed(2)}
+                </span>
+              )}
+              <span className="text-white font-black text-lg md:text-xl uppercase italic">Total</span>
+            </div>
+            <span className="text-3xl md:text-4xl font-black text-secondary tracking-tighter">${total.toFixed(2)}</span>
+          </div>
           <div className="relative">
             <FiDollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary w-5 h-5" />
             <input
@@ -294,14 +351,11 @@ export default function Sales() {
           </div>
           <button
             type="button"
-            // Se deshabilita si no hay productos, no hay efectivo o si ya está cargando
             disabled={order.length === 0 || !efectivo || isProcessing}
             onClick={handlePagar}
             className="group relative w-full h-14 md:h-16 bg-primary text-white rounded-2xl font-black text-lg md:text-xl shadow-lg active:scale-95 disabled:opacity-50 disabled:bg-white/5 disabled:text-white/20 overflow-hidden uppercase tracking-tighter italic transition-all"
           >
-            {/* Efecto de brillo que cruza el botón al pasar el mouse */}
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
-
             <div className="flex items-center justify-center gap-3">
               {isProcessing ? (
                 <>
@@ -334,7 +388,6 @@ export default function Sales() {
               </div>
             )}
 
-            {/* BOTÓN CON AUTOFOCUS: Al dar Enter se cerrará automáticamente */}
             <button
               autoFocus
               onClick={handleCloseModal}
