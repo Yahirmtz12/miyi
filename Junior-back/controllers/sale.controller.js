@@ -4,11 +4,12 @@ const Product = require('../models/Product');
 // CREAR VENTA
 exports.createSale = async (req, res) => {
   try {
-    const { productos, efectivoRecibido } = req.body;
+    // 1. Recibimos el 'descuento' (si no viene, por defecto es 0)
+    const { productos, efectivoRecibido, descuento = 0 } = req.body;
 
-    let total = 0;
+    let subtotal = 0;
 
-    // Validar stock y calcular total
+    // Validar stock y calcular el subtotal (precio normal)
     for (let item of productos) {
       const product = await Product.findById(item.productoId);
 
@@ -18,10 +19,14 @@ exports.createSale = async (req, res) => {
         });
       }
 
-      total += item.precio * item.cantidad;
+      subtotal += item.precio * item.cantidad;
     }
 
-    if (efectivoRecibido < total) {
+    // 2. APLICAMOS EL DESCUENTO SOLO PARA LA VALIDACIÓN
+    const totalConDescuento = subtotal - ((subtotal * descuento) / 100);
+
+    // 3. Validamos el efectivo contra el total real a pagar
+    if (efectivoRecibido < totalConDescuento) {
       return res.status(400).json({ msg: 'Efectivo insuficiente' });
     }
 
@@ -33,11 +38,13 @@ exports.createSale = async (req, res) => {
       );
     }
 
-    const cambio = efectivoRecibido - total;
+    // Calculamos el cambio real
+    const cambio = efectivoRecibido - totalConDescuento;
 
+    // 4. Guardamos la venta (NO agregamos el campo descuento para no alterar tu esquema)
     const sale = new Sale({
       productos,
-      total,
+      total: totalConDescuento, // Se guarda el total ya con la rebaja
       efectivoRecibido,
       cambio,
       usuario: req.user.id
@@ -55,7 +62,6 @@ exports.createSale = async (req, res) => {
     res.status(500).json({ msg: 'Error al registrar venta' });
   }
 };
-
 // OBTENER VENTAS
 // controllers/sale.controller.js
 exports.getSales = async (req, res) => {

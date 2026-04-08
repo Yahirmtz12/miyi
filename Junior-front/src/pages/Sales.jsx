@@ -195,6 +195,7 @@ export default function Sales() {
             cantidad: item.qty, 
             precio: item.precio 
           })),
+          descuento: discount, // <-- Agrega únicamente esta línea
           efectivoRecibido: efectivoLimpio // Mandamos el efectivo limpio al back
         })
       });
