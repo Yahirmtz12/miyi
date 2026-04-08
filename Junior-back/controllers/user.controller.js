@@ -197,7 +197,7 @@ exports.getMemberById = async (req, res) => {
     // 1. Seleccionamos los campos necesarios para la academia
     // Quitamos 'puntos' (si ya no los usas) y agregamos clases y vencimiento
     const user = await User.findOne({ membershipId })
-      .select('nombre clasesDisponibles fechaVencimiento rol');
+      .select('nombre clasesDisponibles fechaVencimiento rol disciplina'); // <--- Asegúrate de incluir 'disciplina' aquí
 
     if (!user) {
       return res.status(404).json({ 
