@@ -15,7 +15,7 @@ import {
   FiX
 } from "react-icons/fi";
 import { API_URL } from "../api";
-import qz from "qz-tray"; // Importa la librería al inicio de tu archivo
+import qz from "qz-tray"; 
 
 export default function Sales() {
   const [products, setProducts] = useState([]);
@@ -59,7 +59,7 @@ export default function Sales() {
   const handleCloseModal = () => {
     if (modal.tipo === "success") {
       setOrder([]);
-      setEfectivo(""); // Reseteamos efectivo aquí también por seguridad
+      setEfectivo(""); 
       setPhone("");
       setSearchTerm("");
       setDiscount(0); 
@@ -92,13 +92,16 @@ export default function Sales() {
     );
   };
 
-  // CÁLCULOS DE TOTALES
+  // --- SOLUCIÓN A LOS DECIMALES FANTASMAS ---
+  // 1. Calculamos y forzamos a que el total solo tenga 2 decimales reales
   const subtotal = order.reduce((a, i) => a + i.precio * i.qty, 0);
   const discountAmount = (subtotal * discount) / 100;
-  const total = subtotal - discountAmount;
+  const total = parseFloat((subtotal - discountAmount).toFixed(2)); 
   
-  // Constante útil para las validaciones del botón y el input
+  // 2. Limpiamos también lo que escribe el usuario para que la comparación sea justa
   const montoRecibido = parseFloat(efectivo) || 0;
+  const efectivoLimpio = parseFloat(montoRecibido.toFixed(2));
+  // -------------------------------------------
 
   const imprimirTicket = () => {
     const comandoApertura = "\u001b\u0070\u0000\u0019\u00fa";
@@ -167,8 +170,13 @@ export default function Sales() {
   };
 
   const handlePagar = async () => {
-    // Doble validación por si lo intentan forzar con la tecla Enter
-    if (order.length === 0 || montoRecibido < total || isProcessing) return;
+    // Usamos 'efectivoLimpio' para que coincida matemáticamente con 'total'
+    if (order.length === 0 || efectivoLimpio < total || isProcessing) return;
+
+    // Validación extra por seguridad
+    if (!efectivoLimpio) {
+      return showModal("Ingresa el monto recibido", "error");
+    }
 
     setIsProcessing(true); 
 
@@ -187,7 +195,7 @@ export default function Sales() {
             cantidad: item.qty, 
             precio: item.precio 
           })),
-          efectivoRecibido: montoRecibido // Usamos montoRecibido validado
+          efectivoRecibido: efectivoLimpio // Mandamos el efectivo limpio al back
         })
       });
 
@@ -198,7 +206,7 @@ export default function Sales() {
       }
 
       setLastSale(data.sale);
-      const cambioReal = montoRecibido - total;
+      const cambioReal = efectivoLimpio - total;
       showModal(`Venta exitosa\nCambio: $${cambioReal.toFixed(2)}`, "success");
       
       if (window.innerWidth < 1024) setShowOrderMobile(false);
@@ -349,8 +357,8 @@ export default function Sales() {
           </div>
           <button
             type="button"
-            // VALIDACIÓN ESTRICTA: El botón se desactiva si el monto es menor al Total
-            disabled={order.length === 0 || montoRecibido < total || isProcessing}
+            // Ahora la condición de desactivación se basa en 'efectivoLimpio' en lugar de 'montoRecibido' crudo
+            disabled={order.length === 0 || efectivoLimpio < total || isProcessing}
             onClick={handlePagar}
             className="group relative w-full h-14 md:h-16 bg-primary text-white rounded-2xl font-black text-lg md:text-xl shadow-lg active:scale-95 disabled:opacity-50 disabled:bg-white/5 disabled:text-white/20 overflow-hidden uppercase tracking-tighter italic transition-all"
           >
