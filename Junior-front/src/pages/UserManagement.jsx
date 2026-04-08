@@ -19,7 +19,6 @@ export default function UserManagement() {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [userToEditPassword, setUserToEditPassword] = useState(null);
   
-  // NUEVO: Estado para ver datos del cliente
   const [showClientModal, setShowClientModal] = useState(false);
   const [selectedClient, setSelectedClient] = useState(null);
   
@@ -193,6 +192,8 @@ export default function UserManagement() {
               <tr>
                 <th className="px-8 py-5 text-[10px] font-black text-white/40 uppercase tracking-widest">Nombre / Usuario</th>
                 <th className="px-8 py-5 text-[10px] font-black text-white/40 uppercase text-center tracking-widest">Rol</th>
+                {/* NUEVA COLUMNA DE ESTATUS */}
+                <th className="px-8 py-5 text-[10px] font-black text-white/40 uppercase text-center tracking-widest">Estatus</th>
                 <th className="px-8 py-5 text-[10px] font-black text-white/40 uppercase text-center tracking-widest">Acciones</th>
               </tr>
             </thead>
@@ -201,6 +202,7 @@ export default function UserManagement() {
                 const esCliente = u.rol === 'cliente';
                 const esYoMismo = u.usuario === currentUser.usuario;
                 const puedeActualizarRol = !esCliente && !esYoMismo;
+                const tieneClases = u.clasesDisponibles > 0;
 
                 return (
                   <tr key={u._id} className="hover:bg-white/5 transition-colors group">
@@ -225,9 +227,20 @@ export default function UserManagement() {
                         {u.rol}
                       </span>
                     </td>
+                    {/* CELDA DE ESTATUS DINÁMICO */}
+                    <td className="px-8 py-5 text-center">
+                      {esCliente ? (
+                        <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase border tracking-widest ${
+                          tieneClases ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'
+                        }`}>
+                          {tieneClases ? 'Activo' : 'Inactivo'}
+                        </span>
+                      ) : (
+                        <span className="text-white/20 font-black">—</span>
+                      )}
+                    </td>
                     <td className="px-8 py-5 text-center">
                       <div className="flex justify-center gap-2">
-                        {/* NUEVO BOTÓN PARA VER DATOS SI ES CLIENTE */}
                         {esCliente && (
                           <button
                             onClick={() => {
@@ -277,6 +290,7 @@ export default function UserManagement() {
             const esCliente = u.rol === 'cliente';
             const esYoMismo = u.usuario === currentUser.usuario;
             const puedeActualizarRol = !esCliente && !esYoMismo;
+            const tieneClases = u.clasesDisponibles > 0;
 
             return (
               <div key={u._id} className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-[2rem] p-5 flex items-center justify-between shadow-xl">
@@ -287,17 +301,29 @@ export default function UserManagement() {
                   <div className="flex flex-col min-w-0">
                     <h3 className="text-white font-bold text-sm leading-none truncate italic">{u.nombre || "Sin Nombre"}</h3>
                     <span className="text-white/30 text-[10px] font-mono mt-1">@{u.usuario}</span>
-                    <span className={`w-fit mt-2 px-2 py-0.5 rounded text-[8px] font-black uppercase border tracking-widest ${
-                      u.rol === 'admin' ? 'text-red-500 border-red-500/20' : 
-                      u.rol === 'cliente' ? 'text-purple-400 border-purple-500/20' : 
-                      'text-blue-400 border-blue-500/20'
-                    }`}>
-                      {u.rol}
-                    </span>
+                    
+                    {/* CONTENEDOR DE BADGES (ROL + ESTATUS) */}
+                    <div className="flex gap-2 mt-2">
+                      <span className={`w-fit px-2 py-0.5 rounded text-[8px] font-black uppercase border tracking-widest ${
+                        u.rol === 'admin' ? 'text-red-500 border-red-500/20 bg-red-500/10' : 
+                        u.rol === 'cliente' ? 'text-purple-400 border-purple-500/20 bg-purple-500/10' : 
+                        'text-blue-400 border-blue-500/20 bg-blue-500/10'
+                      }`}>
+                        {u.rol}
+                      </span>
+                      
+                      {esCliente && (
+                        <span className={`w-fit px-2 py-0.5 rounded text-[8px] font-black uppercase border tracking-widest ${
+                          tieneClases ? 'text-green-400 border-green-500/20 bg-green-500/10' : 'text-red-400 border-red-500/20 bg-red-500/10'
+                        }`}>
+                          {tieneClases ? 'Activo' : 'Inactivo'}
+                        </span>
+                      )}
+                    </div>
+
                   </div>
                 </div>
                 <div className="flex flex-col gap-2 shrink-0">
-                   {/* NUEVO BOTÓN MÓVIL PARA CLIENTES */}
                    {esCliente && (
                     <button
                       onClick={() => {
@@ -337,7 +363,7 @@ export default function UserManagement() {
         </div>
       </main>
 
-      {/* MODAL DETALLES DEL CLIENTE (NUEVO) */}
+      {/* MODAL DETALLES DEL CLIENTE */}
       {showClientModal && selectedClient && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
           <div className="bg-[#1F1F1F] w-full max-w-sm rounded-[2.5rem] border border-white/10 shadow-2xl overflow-hidden animate-in zoom-in duration-300">
@@ -370,7 +396,9 @@ export default function UserManagement() {
                   <FiActivity className="text-secondary w-5 h-5" />
                   <div>
                     <p className="text-[9px] uppercase tracking-widest text-white/40 font-black">Clases Disponibles</p>
-                    <p className="text-xl text-white font-black">{selectedClient.clasesDisponibles || 0}</p>
+                    <p className={`text-xl font-black ${selectedClient.clasesDisponibles > 0 ? 'text-white' : 'text-red-400'}`}>
+                      {selectedClient.clasesDisponibles || 0}
+                    </p>
                   </div>
                 </div>
 
