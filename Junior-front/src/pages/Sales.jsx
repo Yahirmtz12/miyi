@@ -103,9 +103,8 @@ export default function Sales() {
   const efectivoLimpio = parseFloat(montoRecibido.toFixed(2));
   // -------------------------------------------
 
-  const imprimirTicket = () => {
-    const comandoApertura = "\u001b\u0070\u0000\u0019\u00fa";
-
+  const imprimirTicket = async () => {
+    // 1. Textos comunes (Productos y cálculos)
     const itemsText = order.map(i => 
       `${i.qty}x ${i.nombre.toUpperCase().padEnd(12)} $${(i.qty * i.precio).toFixed(2).padStart(7)}`
     ).join('\n');
@@ -113,32 +112,80 @@ export default function Sales() {
     const efectivoReal = parseFloat(lastSale?.efectivoRecibido || efectivo || 0);
     const cambio = efectivoReal > total ? efectivoReal - total : 0;
 
-    const textoTicket = 
-      comandoApertura + 
-      `[C]Rhythm Oaxaca\n` + 
-      `[C]SUCURSAL CENTRO\n` +
-      `--------------------------------\n` +
-      `${itemsText}\n` +
-      `--------------------------------\n` +
-      `SUBTOTAL:       $${subtotal.toFixed(2).padStart(10)}\n` +
-      (discount > 0 ? `DESCUENTO (${discount}%):-$${discountAmount.toFixed(2).padStart(10)}\n` : "") +
-      `TOTAL:          $${total.toFixed(2).padStart(10)}\n` +
-      `EFECTIVO:       $${efectivoReal.toFixed(2).padStart(10)}\n` +
-      `CAMBIO:         $${cambio.toFixed(2).padStart(10)}\n` +
-      `--------------------------------\n` +
-      `[C]¡GRACIAS POR SU COMPRA!\n` +
-      `[C]${new Date().toLocaleString()}\n\n`;
+    // --------------------------------------------------------
+    // RUTA 1: TABLET / CELULAR (Usa RawBT con tags [C] y [DRAWER])
+    // --------------------------------------------------------
+    if (esMovil()) {
+      const comandoApertura = "\u001b\u0070\u0000\u0019\u00fa";
+      const textoRawBT = 
+        comandoApertura + 
+        `[C]Rhythm Oaxaca\n` + 
+        `[C]SUCURSAL CENTRO\n` +
+        `--------------------------------\n` +
+        `${itemsText}\n` +
+        `--------------------------------\n` +
+        `SUBTOTAL:       $${subtotal.toFixed(2).padStart(10)}\n` +
+        (discount > 0 ? `DESCUENTO (${discount}%):-$${discountAmount.toFixed(2).padStart(10)}\n` : "") +
+        `TOTAL:          $${total.toFixed(2).padStart(10)}\n` +
+        `EFECTIVO:       $${efectivoReal.toFixed(2).padStart(10)}\n` +
+        `CAMBIO:         $${cambio.toFixed(2).padStart(10)}\n` +
+        `--------------------------------\n` +
+        `[C]¡GRACIAS POR SU COMPRA!\n` +
+        `[C]${new Date().toLocaleString()}\n\n`;
 
-    const encodedText = encodeURIComponent(textoTicket);
-    const intentURL = `intent:${encodedText}#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;end;`;
+      const intentURL = `intent:${encodeURIComponent(textoRawBT)}#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;end;`;
+      
+      try {
+        window.location.href = intentURL;
+      } catch (e) {
+        alert("Asegúrate de tener instalada la app RawBT Printer en tu tablet.");
+      }
+    } 
+    // --------------------------------------------------------
+    // RUTA 2: COMPUTADORA (Usa QZ Tray)
+    // --------------------------------------------------------
+    else {
+      try {
+        // Conectar a QZ Tray si no está conectado
+        if (!qz.websocket.isActive()) {
+          await qz.websocket.connect();
+        }
 
-    try {
-      window.location.href = intentURL;
-    } catch (e) {
-      alert("Asegúrate de tener instalada la app RawBT Printer en tu tablet.");
+        // IMPORTANTE: Cambia "POS-58" por el nombre exacto de tu impresora en Windows/Mac
+        const config = qz.configs.create("POS-58"); 
+
+        // En QZ Tray centramos con espacios manuales para evitar errores de formato
+        const textoQZ = 
+          `          Rhythm Oaxaca\n` + 
+          `         SUCURSAL CENTRO\n` +
+          `--------------------------------\n` +
+          `${itemsText}\n` +
+          `--------------------------------\n` +
+          `SUBTOTAL:       $${subtotal.toFixed(2).padStart(10)}\n` +
+          (discount > 0 ? `DESCUENTO (${discount}%):-$${discountAmount.toFixed(2).padStart(10)}\n` : "") +
+          `TOTAL:          $${total.toFixed(2).padStart(10)}\n` +
+          `EFECTIVO:       $${efectivoReal.toFixed(2).padStart(10)}\n` +
+          `CAMBIO:         $${cambio.toFixed(2).padStart(10)}\n` +
+          `--------------------------------\n` +
+          `     ¡GRACIAS POR SU COMPRA!\n` +
+          `   ${new Date().toLocaleString()}\n\n\n`;
+
+        const data = [
+          // 1. Manda el pulso hexadecimal para abrir el cajón
+          { type: 'raw', format: 'hex', data: '1B700019FA' },
+          // 2. Manda el texto del ticket
+          { type: 'raw', format: 'plain', data: textoQZ }
+        ];
+
+        await qz.print(config, data);
+
+      } catch (err) {
+        console.error("Error con QZ Tray:", err);
+        alert("Error al imprimir. Revisa que QZ Tray esté abierto y la impresora conectada.");
+      }
     }
   };
-
+  
   const sendWhatsApp = () => {
     if (!phone || phone.length < 10) return alert("Por favor, ingresa un número de 10 dígitos");
     const cleanPhone = phone.replace(/\D/g, '');
