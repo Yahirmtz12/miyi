@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react"; // <-- Agregamos useRef
 import { Html5QrcodeScanner } from "html5-qrcode";
 import {
   FiCamera, FiSearch, FiDollarSign,
@@ -15,15 +15,57 @@ export default function MembresiaCaja() {
   const [cantidadClases, setCantidadClases] = useState(8);
   const [montoCobrado, setMontoCobrado] = useState("");
   const [nuevaFechaVencimiento, setNuevaFechaVencimiento] = useState("");
-  const [disciplina, setDisciplina] = useState(""); // <-- NUEVO ESTADO
+  const [disciplina, setDisciplina] = useState(""); 
   const [showModal, setShowModal] = useState(false);
   const [modalData, setModalData] = useState(null);
+
+  // --- REFERENCIAS PARA EL ESCÁNER FÍSICO ---
+  const scannerBuffer = useRef("");
+  const scannerTimeout = useRef(null);
 
   const calcularFechaDefault = () => {
     const d = new Date();
     d.setDate(d.getDate() + 30);
     return d.toISOString().split('T')[0];
   };
+
+  // --- OYENTE GLOBAL PARA EL ESCÁNER FÍSICO ---
+  useEffect(() => {
+    const handleGlobalKeyDown = (e) => {
+      // 1. Si el usuario está escribiendo manualmente en los inputs (Monto, Disciplina, etc),
+      // ignoramos el evento global para no interrumpirlo.
+      const activeTag = document.activeElement.tagName;
+      if (activeTag === "INPUT" || activeTag === "TEXTAREA") {
+        return;
+      }
+
+      // 2. Si el escáner manda un "Enter" (finalizó de leer el código)
+      if (e.key === "Enter") {
+        if (scannerBuffer.current.length >= 5) {
+          // Guardamos lo capturado y disparamos la búsqueda
+          setMembershipId(scannerBuffer.current.toUpperCase());
+        }
+        scannerBuffer.current = ""; // Limpiamos el buffer
+        return;
+      }
+
+      // 3. Si es una letra o número, lo acumulamos
+      if (e.key.length === 1) {
+        scannerBuffer.current += e.key;
+
+        // Los escáneres escriben rapidísimo. Si pasan más de 100ms sin teclear,
+        // asumimos que fue un humano tocando teclas por error y limpiamos el buffer.
+        clearTimeout(scannerTimeout.current);
+        scannerTimeout.current = setTimeout(() => {
+          scannerBuffer.current = "";
+        }, 150);
+      }
+    };
+
+    window.addEventListener("keydown", handleGlobalKeyDown);
+    return () => window.removeEventListener("keydown", handleGlobalKeyDown);
+  }, []);
+  // ---------------------------------------------
 
   useEffect(() => {
     const fetchClientInfo = async () => {
@@ -38,7 +80,6 @@ export default function MembresiaCaja() {
           if (res.ok) {
             setClientData(data);
             setNuevaFechaVencimiento(calcularFechaDefault());
-            // Llenamos el input con la disciplina actual (si la tiene)
             setDisciplina(data.disciplina || ""); 
           } else { 
             setClientData(null); 
@@ -58,6 +99,7 @@ export default function MembresiaCaja() {
     return () => clearTimeout(timer);
   }, [membershipId]);
 
+  // Efecto para el escáner de cámara (Html5QrcodeScanner)
   useEffect(() => {
     const scanner = new Html5QrcodeScanner("reader-caja", {
       fps: 10, qrbox: { width: 250, height: 250 },
@@ -74,7 +116,6 @@ export default function MembresiaCaja() {
       const res = await fetch(`${API_URL}/api/users/renew-membership`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-        // Enviamos la disciplina al backend
         body: JSON.stringify({ 
           membershipId, 
           cantidadClases, 
@@ -89,7 +130,7 @@ export default function MembresiaCaja() {
         setShowModal(true);
         setMembershipId("");
         setClientData(null);
-        setDisciplina(""); // Limpiamos al terminar
+        setDisciplina(""); 
       }
     } catch (error) { alert("Error"); }
     finally { setLoading(false); }
@@ -98,7 +139,6 @@ export default function MembresiaCaja() {
   return (
     <div className="bg-[#1F1F1F] min-h-screen text-white font-sans">
 
-      {/* HEADER ESTILO INVENTARIO */}
       <header className="p-4 md:p-8 pb-4 flex flex-col gap-4 md:gap-6 shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3 md:gap-4">
@@ -143,10 +183,8 @@ export default function MembresiaCaja() {
                 onSubmit={handleRenewMembership}
                 className="relative bg-[#1A1A1A] p-8 rounded-[3rem] border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] space-y-6 animate-in fade-in zoom-in duration-500 overflow-hidden"
               >
-                {/* Decoración: Resplandor sutil de fondo */}
                 <div className="absolute -top-24 -right-24 w-48 h-48 bg-primary/10 blur-[80px] rounded-full pointer-events-none" />
 
-                {/* HEADER DEL FORMULARIO - INFO DEL CLIENTE */}
                 <div className="relative flex justify-between items-start border-b border-white/5 pb-6">
                   <div>
                     <span className="text-[10px] font-black uppercase text-primary tracking-[0.3em] mb-1 block">Renovación de Cuenta</span>
@@ -165,7 +203,6 @@ export default function MembresiaCaja() {
                   </div>
                 </div>
 
-                {/* DISCIPLINA (NUEVO CAMPO) */}
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase text-white/30 tracking-widest ml-2 flex items-center gap-2">
                     <FiEdit3 className="text-primary" /> Disciplina Inscrita
@@ -179,7 +216,6 @@ export default function MembresiaCaja() {
                   />
                 </div>
 
-                {/* GRID DE INPUTS (CLASES Y MONTO) */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase text-white/30 tracking-widest ml-2 flex items-center gap-2">
@@ -215,7 +251,6 @@ export default function MembresiaCaja() {
                   </div>
                 </div>
 
-                {/* FECHA DE VENCIMIENTO */}
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase text-white/30 tracking-widest ml-2 flex items-center gap-2">
                     <FiCalendar className="text-primary" /> Nueva Fecha de Vencimiento
@@ -229,7 +264,6 @@ export default function MembresiaCaja() {
                   />
                 </div>
 
-                {/* BOTÓN DE ACCIÓN */}
                 <div className="pt-4">
                   <button
                     type="submit"
