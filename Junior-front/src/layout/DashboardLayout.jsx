@@ -19,7 +19,7 @@ export default function DashboardLayout() {
     { to: "/dashboard/mesero", label: "Mesas", icon: "grid_view", roles: ['admin', 'mesero','cajero'] },
     { to: "/dashboard/kitchen", label: "Cocina", icon: "restaurant", roles: ['admin', 'cocinero'] },
     { to: "/dashboard/loyalty", label: "Membresía", icon: "redeem", roles: ['admin', 'cajero'] },
-    { to: "/dashboard/kiosko", label: "Kiosko", icon: "backpack", roles: ['admin', 'kiosko'] },
+    { to: "/dashboard/kiosko", label: "Kiosko", icon: "backpack", roles: ['admin', 'kiosko', 'cajero'] },
     { to: "/dashboard/inventory", label: "Inventario", icon: "inventory_2", roles: ['admin'] },
     { to: "/dashboard/reports", label: "Análisis", icon: "analytics", roles: ['admin'] },
     { to: "/dashboard/users", label: "Usuarios", icon: "group", roles: ['admin'] },

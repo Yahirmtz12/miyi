@@ -76,7 +76,7 @@ export default function App() {
           />
           <Route 
             path="kiosko" 
-            element={isAdmin || iskiosko ? <Kios /> : <Navigate to={getHomePath()} replace />} 
+            element={isAdmin || iskiosko || isCajero ? <Kios /> : <Navigate to={getHomePath()} replace />} 
           />
 
           {/* MESERO: Solo Admin y Mesero */}
