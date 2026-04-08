@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import {
   FiShield, FiUserPlus, FiRefreshCw, FiX, FiUser,
-  FiLock, FiEdit3, FiTrash2, FiAlertTriangle, FiEye, FiCalendar, FiActivity
+  FiLock, FiEdit3, FiTrash2, FiAlertTriangle, FiEye, 
+  FiCalendar, FiActivity, FiSearch, FiFilter
 } from "react-icons/fi";
 import { API_URL } from "../api";
 
@@ -22,6 +23,11 @@ export default function UserManagement() {
   const [showClientModal, setShowClientModal] = useState(false);
   const [selectedClient, setSelectedClient] = useState(null);
   
+  // --- NUEVOS ESTADOS PARA FILTROS ---
+  const [searchTerm, setSearchTerm] = useState("");
+  const [roleFilter, setRoleFilter] = useState("todos");
+  const [statusFilter, setStatusFilter] = useState("todos");
+
   const [newPassword, setNewPassword] = useState("");
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
 
@@ -154,6 +160,26 @@ export default function UserManagement() {
     } catch (err) { console.error(err); }
   };
 
+  // --- LÓGICA DE FILTRADO ---
+  const displayedUsers = users.filter((u) => {
+    // Filtro por texto (nombre o usuario)
+    const matchesSearch = (u.nombre || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          (u.usuario || "").toLowerCase().includes(searchTerm.toLowerCase());
+    
+    // Filtro por rol
+    const matchesRole = roleFilter === "todos" || u.rol === roleFilter;
+
+    // Filtro por estatus (solo aplica a clientes)
+    let matchesStatus = true;
+    if (statusFilter === "activo") {
+      matchesStatus = u.rol === "cliente" && u.clasesDisponibles > 0;
+    } else if (statusFilter === "inactivo") {
+      matchesStatus = u.rol === "cliente" && (!u.clasesDisponibles || u.clasesDisponibles <= 0);
+    }
+
+    return matchesSearch && matchesRole && matchesStatus;
+  });
+
   return (
     <div className="bg-[#1F1F1F] min-h-screen text-white font-sans">
       <header className="p-4 md:p-8 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-6 shrink-0">
@@ -180,9 +206,69 @@ export default function UserManagement() {
       </header>
 
       <main className="p-4 md:p-8 space-y-6 max-w-6xl mx-auto">
-        <div className="flex items-center gap-3 px-2">
-          <FiUser className="text-secondary w-5 h-5" />
-          <h2 className="text-xs font-black uppercase tracking-[0.2em] text-white/40 italic">Plantilla de Usuarios</h2>
+        
+        {/* TÍTULO Y CONTADOR DE USUARIOS */}
+        <div className="flex items-center justify-between px-2">
+          <div className="flex items-center gap-3">
+            <FiUser className="text-secondary w-5 h-5" />
+            <h2 className="text-xs font-black uppercase tracking-[0.2em] text-white/40 italic">Plantilla de Usuarios</h2>
+          </div>
+          <span className="bg-white/10 text-white/60 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-white/10">
+            {displayedUsers.length} {displayedUsers.length === 1 ? 'Usuario' : 'Usuarios'} en Total
+          </span>
+        </div>
+
+        {/* BARRA DE FILTROS */}
+        <div className="flex flex-col md:flex-row gap-4 bg-black/20 p-4 rounded-3xl border border-white/5">
+          
+          {/* Buscador de texto */}
+          <div className="relative flex-1">
+            <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" />
+            <input
+              type="text"
+              placeholder="BUSCAR NOMBRE O USUARIO..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full bg-black/40 border border-white/10 rounded-2xl py-3 pl-12 pr-4 text-white focus:border-primary outline-none text-xs font-bold uppercase transition-all placeholder:text-white/20 tracking-widest"
+            />
+          </div>
+
+          {/* Filtros Selects */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="relative">
+              <FiFilter className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 pointer-events-none" />
+              <select
+                value={roleFilter}
+                onChange={(e) => {
+                  setRoleFilter(e.target.value);
+                  if (e.target.value !== "cliente" && e.target.value !== "todos") setStatusFilter("todos");
+                }}
+                className="w-full sm:w-48 bg-black/40 border border-white/10 rounded-2xl py-3 pl-12 pr-8 text-white focus:border-primary outline-none text-xs font-bold uppercase transition-all cursor-pointer appearance-none tracking-widest"
+              >
+                <option value="todos">Todos los roles</option>
+                <option value="admin">Administradores</option>
+                <option value="cajero">Cajeros</option>
+                <option value="cliente">Clientes</option>
+                <option value="cocinero">Cocineros</option>
+                <option value="mesero">Meseros</option>
+                <option value="kiosko">Kioskos</option>
+              </select>
+            </div>
+
+            <div className="relative">
+              <FiActivity className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 pointer-events-none" />
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                disabled={roleFilter !== "todos" && roleFilter !== "cliente"}
+                className="w-full sm:w-48 bg-black/40 border border-white/10 rounded-2xl py-3 pl-12 pr-8 text-white focus:border-primary outline-none text-xs font-bold uppercase transition-all cursor-pointer appearance-none tracking-widest disabled:opacity-30"
+              >
+                <option value="todos">Cualquier estatus</option>
+                <option value="activo">Clientes Activos</option>
+                <option value="inactivo">Clientes Inactivos</option>
+              </select>
+            </div>
+          </div>
         </div>
 
         {/* TABLA PC */}
@@ -192,174 +278,185 @@ export default function UserManagement() {
               <tr>
                 <th className="px-8 py-5 text-[10px] font-black text-white/40 uppercase tracking-widest">Nombre / Usuario</th>
                 <th className="px-8 py-5 text-[10px] font-black text-white/40 uppercase text-center tracking-widest">Rol</th>
-                {/* NUEVA COLUMNA DE ESTATUS */}
                 <th className="px-8 py-5 text-[10px] font-black text-white/40 uppercase text-center tracking-widest">Estatus</th>
                 <th className="px-8 py-5 text-[10px] font-black text-white/40 uppercase text-center tracking-widest">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {users.map((u) => {
-                const esCliente = u.rol === 'cliente';
-                const esYoMismo = u.usuario === currentUser.usuario;
-                const puedeActualizarRol = !esCliente && !esYoMismo;
-                const tieneClases = u.clasesDisponibles > 0;
+              {displayedUsers.length === 0 ? (
+                <tr>
+                  <td colSpan="4" className="px-8 py-12 text-center text-white/30 text-xs font-black uppercase tracking-widest">
+                    No se encontraron usuarios
+                  </td>
+                </tr>
+              ) : (
+                displayedUsers.map((u) => {
+                  const esCliente = u.rol === 'cliente';
+                  const esYoMismo = u.usuario === currentUser.usuario;
+                  const puedeActualizarRol = !esCliente && !esYoMismo;
+                  const tieneClases = u.clasesDisponibles > 0;
 
-                return (
-                  <tr key={u._id} className="hover:bg-white/5 transition-colors group">
-                    <td className="px-8 py-5 flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-gray-700 to-gray-800 flex items-center justify-center text-secondary font-bold border border-white/10 shadow-inner">
-                        {(u.nombre || u.usuario).charAt(0).toUpperCase()}
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="text-white font-bold tracking-wide italic">{u.nombre || "Sin Nombre"}</span>
-                        <span className="text-white/30 text-xs font-mono">@{u.usuario}</span>
-                      </div>
-                    </td>
-                    <td className="px-8 py-5 text-center">
-                      <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase border tracking-widest ${u.rol === 'admin' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
-                        u.rol === 'cajero' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
-                          u.rol === 'cliente' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' :
-                            u.rol === 'cocinero' ? 'bg-orange-500/10 text-orange-400 border-orange-500/20' :
-                              u.rol === 'mesero' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
-                                u.rol === 'kiosko' ? 'bg-red-500/10 text-green-400 border-green-500/20' :
-                                  'bg-gray-500/10 text-gray-400 border-gray-500/20'
-                        }`}>
-                        {u.rol}
-                      </span>
-                    </td>
-                    {/* CELDA DE ESTATUS DINÁMICO */}
-                    <td className="px-8 py-5 text-center">
-                      {esCliente ? (
-                        <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase border tracking-widest ${
-                          tieneClases ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'
-                        }`}>
-                          {tieneClases ? 'Activo' : 'Inactivo'}
+                  return (
+                    <tr key={u._id} className="hover:bg-white/5 transition-colors group">
+                      <td className="px-8 py-5 flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-gray-700 to-gray-800 flex items-center justify-center text-secondary font-bold border border-white/10 shadow-inner">
+                          {(u.nombre || u.usuario).charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-white font-bold tracking-wide italic">{u.nombre || "Sin Nombre"}</span>
+                          <span className="text-white/30 text-xs font-mono">@{u.usuario}</span>
+                        </div>
+                      </td>
+                      <td className="px-8 py-5 text-center">
+                        <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase border tracking-widest ${u.rol === 'admin' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
+                          u.rol === 'cajero' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
+                            u.rol === 'cliente' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' :
+                              u.rol === 'cocinero' ? 'bg-orange-500/10 text-orange-400 border-orange-500/20' :
+                                u.rol === 'mesero' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
+                                  u.rol === 'kiosko' ? 'bg-red-500/10 text-green-400 border-green-500/20' :
+                                    'bg-gray-500/10 text-gray-400 border-gray-500/20'
+                          }`}>
+                          {u.rol}
                         </span>
-                      ) : (
-                        <span className="text-white/20 font-black">—</span>
-                      )}
-                    </td>
-                    <td className="px-8 py-5 text-center">
-                      <div className="flex justify-center gap-2">
-                        {esCliente && (
+                      </td>
+                      <td className="px-8 py-5 text-center">
+                        {esCliente ? (
+                          <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase border tracking-widest ${
+                            tieneClases ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'
+                          }`}>
+                            {tieneClases ? 'Activo' : 'Inactivo'}
+                          </span>
+                        ) : (
+                          <span className="text-white/20 font-black">—</span>
+                        )}
+                      </td>
+                      <td className="px-8 py-5 text-center">
+                        <div className="flex justify-center gap-2">
+                          {esCliente && (
+                            <button
+                              onClick={() => {
+                                setSelectedClient(u);
+                                setShowClientModal(true);
+                              }}
+                              className="p-3 bg-white/5 hover:bg-purple-500 text-white rounded-xl transition-all border border-white/5 active:scale-90"
+                              title="Ver Membresía"
+                            >
+                              <FiEye className="w-5 h-5" />
+                            </button>
+                          )}
+
                           <button
                             onClick={() => {
-                              setSelectedClient(u);
-                              setShowClientModal(true);
+                              setUserToEditPassword(u);
+                              setShowPasswordModal(true);
+                              setErrorMsg("");
                             }}
-                            className="p-3 bg-white/5 hover:bg-purple-500 text-white rounded-xl transition-all border border-white/5 active:scale-90"
-                            title="Ver Membresía"
+                            className="p-3 bg-white/5 hover:bg-primary text-white rounded-xl transition-all border border-white/5 active:scale-90"
+                            title="Cambiar Contraseña"
                           >
-                            <FiEye className="w-5 h-5" />
+                            <FiLock className="w-5 h-5" />
                           </button>
-                        )}
-
-                        <button
-                          onClick={() => {
-                            setUserToEditPassword(u);
-                            setShowPasswordModal(true);
-                            setErrorMsg("");
-                          }}
-                          className="p-3 bg-white/5 hover:bg-primary text-white rounded-xl transition-all border border-white/5 active:scale-90"
-                          title="Cambiar Contraseña"
-                        >
-                          <FiLock className="w-5 h-5" />
-                        </button>
-                        {puedeActualizarRol && (
-                          <button onClick={() => handleToggleRol(u._id, u.rol)} className="p-3 bg-white/5 hover:bg-secondary hover:text-black text-white rounded-xl transition-all border border-white/5 active:scale-90">
-                            <FiRefreshCw className="w-5 h-5" />
-                          </button>
-                        )}
-                        {!esYoMismo && (
-                          <button onClick={() => confirmDelete(u)} className="p-3 bg-white/5 hover:bg-red-600 text-white rounded-xl transition-all border border-white/5 active:scale-90">
-                            <FiTrash2 className="w-5 h-5" />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                )
-              })}
+                          {puedeActualizarRol && (
+                            <button onClick={() => handleToggleRol(u._id, u.rol)} className="p-3 bg-white/5 hover:bg-secondary hover:text-black text-white rounded-xl transition-all border border-white/5 active:scale-90">
+                              <FiRefreshCw className="w-5 h-5" />
+                            </button>
+                          )}
+                          {!esYoMismo && (
+                            <button onClick={() => confirmDelete(u)} className="p-3 bg-white/5 hover:bg-red-600 text-white rounded-xl transition-all border border-white/5 active:scale-90">
+                              <FiTrash2 className="w-5 h-5" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })
+              )}
             </tbody>
           </table>
         </div>
 
         {/* CARDS MÓVIL */}
         <div className="grid grid-cols-1 gap-4 md:hidden pb-20">
-          {users.map((u) => {
-            const esCliente = u.rol === 'cliente';
-            const esYoMismo = u.usuario === currentUser.usuario;
-            const puedeActualizarRol = !esCliente && !esYoMismo;
-            const tieneClases = u.clasesDisponibles > 0;
+          {displayedUsers.length === 0 ? (
+            <div className="bg-black/40 border border-white/10 rounded-[2rem] p-10 text-center text-white/30 text-xs font-black uppercase tracking-widest">
+              No se encontraron usuarios
+            </div>
+          ) : (
+            displayedUsers.map((u) => {
+              const esCliente = u.rol === 'cliente';
+              const esYoMismo = u.usuario === currentUser.usuario;
+              const puedeActualizarRol = !esCliente && !esYoMismo;
+              const tieneClases = u.clasesDisponibles > 0;
 
-            return (
-              <div key={u._id} className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-[2rem] p-5 flex items-center justify-between shadow-xl">
-                <div className="flex items-center gap-4 min-w-0">
-                  <div className="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center text-secondary text-xl font-black border border-white/10 uppercase shrink-0">
-                    {(u.nombre || u.usuario).charAt(0).toUpperCase()}
-                  </div>
-                  <div className="flex flex-col min-w-0">
-                    <h3 className="text-white font-bold text-sm leading-none truncate italic">{u.nombre || "Sin Nombre"}</h3>
-                    <span className="text-white/30 text-[10px] font-mono mt-1">@{u.usuario}</span>
-                    
-                    {/* CONTENEDOR DE BADGES (ROL + ESTATUS) */}
-                    <div className="flex gap-2 mt-2">
-                      <span className={`w-fit px-2 py-0.5 rounded text-[8px] font-black uppercase border tracking-widest ${
-                        u.rol === 'admin' ? 'text-red-500 border-red-500/20 bg-red-500/10' : 
-                        u.rol === 'cliente' ? 'text-purple-400 border-purple-500/20 bg-purple-500/10' : 
-                        'text-blue-400 border-blue-500/20 bg-blue-500/10'
-                      }`}>
-                        {u.rol}
-                      </span>
-                      
-                      {esCliente && (
-                        <span className={`w-fit px-2 py-0.5 rounded text-[8px] font-black uppercase border tracking-widest ${
-                          tieneClases ? 'text-green-400 border-green-500/20 bg-green-500/10' : 'text-red-400 border-red-500/20 bg-red-500/10'
-                        }`}>
-                          {tieneClases ? 'Activo' : 'Inactivo'}
-                        </span>
-                      )}
+              return (
+                <div key={u._id} className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-[2rem] p-5 flex items-center justify-between shadow-xl">
+                  <div className="flex items-center gap-4 min-w-0">
+                    <div className="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center text-secondary text-xl font-black border border-white/10 uppercase shrink-0">
+                      {(u.nombre || u.usuario).charAt(0).toUpperCase()}
                     </div>
+                    <div className="flex flex-col min-w-0">
+                      <h3 className="text-white font-bold text-sm leading-none truncate italic">{u.nombre || "Sin Nombre"}</h3>
+                      <span className="text-white/30 text-[10px] font-mono mt-1">@{u.usuario}</span>
+                      
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        <span className={`w-fit px-2 py-0.5 rounded text-[8px] font-black uppercase border tracking-widest ${
+                          u.rol === 'admin' ? 'text-red-500 border-red-500/20 bg-red-500/10' : 
+                          u.rol === 'cliente' ? 'text-purple-400 border-purple-500/20 bg-purple-500/10' : 
+                          'text-blue-400 border-blue-500/20 bg-blue-500/10'
+                        }`}>
+                          {u.rol}
+                        </span>
+                        
+                        {esCliente && (
+                          <span className={`w-fit px-2 py-0.5 rounded text-[8px] font-black uppercase border tracking-widest ${
+                            tieneClases ? 'text-green-400 border-green-500/20 bg-green-500/10' : 'text-red-400 border-red-500/20 bg-red-500/10'
+                          }`}>
+                            {tieneClases ? 'Activo' : 'Inactivo'}
+                          </span>
+                        )}
+                      </div>
 
+                    </div>
                   </div>
-                </div>
-                <div className="flex flex-col gap-2 shrink-0">
-                   {esCliente && (
+                  <div className="flex flex-col gap-2 shrink-0">
+                    {esCliente && (
+                      <button
+                        onClick={() => {
+                          setSelectedClient(u);
+                          setShowClientModal(true);
+                        }}
+                        className="p-3.5 bg-white/5 text-purple-400 rounded-2xl border border-white/10 active:scale-90 transition-transform"
+                      >
+                        <FiEye className="w-5 h-5" />
+                      </button>
+                    )}
+
                     <button
                       onClick={() => {
-                        setSelectedClient(u);
-                        setShowClientModal(true);
+                        setUserToEditPassword(u);
+                        setShowPasswordModal(true);
+                        setErrorMsg("");
                       }}
-                      className="p-3.5 bg-white/5 text-purple-400 rounded-2xl border border-white/10 active:scale-90 transition-transform"
+                      className="p-3.5 bg-white/5 text-primary rounded-2xl border border-white/10 active:scale-90 transition-transform"
                     >
-                      <FiEye className="w-5 h-5" />
+                      <FiLock className="w-5 h-5" />
                     </button>
-                  )}
-
-                  <button
-                    onClick={() => {
-                      setUserToEditPassword(u);
-                      setShowPasswordModal(true);
-                      setErrorMsg("");
-                    }}
-                    className="p-3.5 bg-white/5 text-primary rounded-2xl border border-white/10 active:scale-90 transition-transform"
-                  >
-                    <FiLock className="w-5 h-5" />
-                  </button>
-                  {puedeActualizarRol && (
-                    <button onClick={() => handleToggleRol(u._id, u.rol)} className="p-3.5 bg-white/5 text-secondary rounded-2xl border border-white/10 active:scale-90 transition-transform">
-                      <FiRefreshCw className="w-5 h-5" />
-                    </button>
-                  )}
-                  {!esYoMismo && (
-                    <button onClick={() => confirmDelete(u)} className="p-3.5 bg-white/5 text-red-500 rounded-2xl border border-white/10 active:scale-90 transition-transform">
-                      <FiTrash2 className="w-5 h-5" />
-                    </button>
-                  )}
+                    {puedeActualizarRol && (
+                      <button onClick={() => handleToggleRol(u._id, u.rol)} className="p-3.5 bg-white/5 text-secondary rounded-2xl border border-white/10 active:scale-90 transition-transform">
+                        <FiRefreshCw className="w-5 h-5" />
+                      </button>
+                    )}
+                    {!esYoMismo && (
+                      <button onClick={() => confirmDelete(u)} className="p-3.5 bg-white/5 text-red-500 rounded-2xl border border-white/10 active:scale-90 transition-transform">
+                        <FiTrash2 className="w-5 h-5" />
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )
-          })}
+              )
+            })
+          )}
         </div>
       </main>
 
