@@ -185,7 +185,7 @@ export default function Sales() {
       }
     }
   };
-  
+
   const sendWhatsApp = () => {
     if (!phone || phone.length < 10) return alert("Por favor, ingresa un número de 10 dígitos");
     const cleanPhone = phone.replace(/\D/g, '');
@@ -368,7 +368,7 @@ export default function Sales() {
             <div className="px-2 flex items-center justify-between gap-4 mb-2">
               <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Descuento (%)</span>
               <div className="flex gap-1 bg-white/5 p-1 rounded-xl border border-white/10">
-                {[0, 5, 10, 15, 20].map(val => (
+                {[0, 5, 10, 15, 20, 25].map(val => (
                   <button 
                     key={val} 
                     onClick={() => setDiscount(val)}
