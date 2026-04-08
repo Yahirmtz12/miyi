@@ -15,11 +15,9 @@ export default function MembresiaStaff() {
   const [showModal, setShowModal] = useState(false);
   const [modalData, setModalData] = useState(null);
 
-  // --- REFERENCIAS PARA EL ESCÁNER FÍSICO ---
   const scannerBuffer = useRef("");
   const scannerTimeout = useRef(null);
 
-  // --- FUNCIÓN DE LIMPIEZA TOTAL (RESET) ---
   const resetKiosk = () => {
     setMembershipId("");
     setClientData(null);
@@ -27,18 +25,20 @@ export default function MembresiaStaff() {
     setModalData(null);
   };
 
-  // --- 1. OYENTE GLOBAL DEL ESCÁNER ---
+  // --- 1. OYENTE GLOBAL DEL ESCÁNER FÍSICO ---
   useEffect(() => {
     const handleGlobalKeyDown = (e) => {
-      // Si el modal está abierto y presionan Enter, lo cerramos rápido
       if (showModal && e.key === "Enter") {
         resetKiosk();
         return;
       }
 
-      // Evitar interferir si alguien está escribiendo manual en el input
-      const activeTag = document.activeElement.tagName;
-      if (activeTag === "INPUT" || activeTag === "TEXTAREA") return;
+      const activeElement = document.activeElement;
+      const isInput = activeElement.tagName === "INPUT" || activeElement.tagName === "TEXTAREA";
+
+      if (isInput || e.key === "Backspace" || e.key.length > 1 && e.key !== "Enter") {
+        return;
+      }
 
       if (e.key === "Enter") {
         if (scannerBuffer.current.length >= 5) {
@@ -48,20 +48,51 @@ export default function MembresiaStaff() {
         return;
       }
 
-      if (e.key.length === 1) {
+      if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
         scannerBuffer.current += e.key;
         clearTimeout(scannerTimeout.current);
         scannerTimeout.current = setTimeout(() => {
           scannerBuffer.current = "";
-        }, 150);
+        }, 100);
       }
     };
 
     window.addEventListener("keydown", handleGlobalKeyDown);
-    return () => window.removeEventListener("keydown", handleGlobalKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleGlobalKeyDown);
+      clearTimeout(scannerTimeout.current);
+    };
   }, [showModal]);
 
-  // --- BUSCAR INFORMACIÓN AL LEER CÓDIGO ---
+  // --- 2. CÁMARA WEB (Html5QrcodeScanner) ARREGLADA ---
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const scanner = new Html5QrcodeScanner("reader", {
+        fps: 10, 
+        qrbox: { width: 250, height: 250 },
+        formatsToSupport: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15] 
+      }, false);
+
+      scanner.render(
+        (result) => {
+          scanner.pause(true); // Pausa para no leer a lo loco
+          setMembershipId(result.toUpperCase());
+          setTimeout(() => { if (scanner.getState() === 2) scanner.resume(); }, 4000); // Reanuda tras 4 seg
+        },
+        (error) => {
+          // Ignoramos errores de búsqueda vacía
+        }
+      );
+
+      return () => {
+        scanner.clear().catch(err => console.error("Error limpiando scanner:", err));
+      };
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  // --- 3. BUSCAR INFORMACIÓN AL LEER CÓDIGO ---
   useEffect(() => {
     const fetchClientInfo = async () => {
       if (membershipId.length >= 5) {
@@ -74,25 +105,24 @@ export default function MembresiaStaff() {
           const data = await res.json();
           if (res.ok) { setClientData(data); } 
           else { setClientData(null); }
-        } catch (error) { console.error("Error"); }
+        } catch (error) { console.error("Error al buscar miembro"); }
         finally { setSearchingClient(false); }
       } else { setClientData(null); }
     };
-    const timer = setTimeout(fetchClientInfo, 500);
+    
+    const timer = setTimeout(fetchClientInfo, 300);
     return () => clearTimeout(timer);
   }, [membershipId]);
 
-  // --- 2. AUTO-REGISTRO Y AUTO-LIMPIEZA DE RECHAZOS ---
+  // --- 4. AUTO-REGISTRO Y AUTO-LIMPIEZA DE RECHAZOS ---
   useEffect(() => {
     if (clientData) {
       if (clientData.status === "activa" && !showModal) {
-        // Medio segundo de retraso para que el alumno alcance a ver su nombre
         const autoRegisterTimer = setTimeout(() => {
           handleRegisterAttendance();
         }, 1000);
         return () => clearTimeout(autoRegisterTimer);
       } else if (clientData.status !== "activa") {
-        // Si fue RECHAZADO, borramos la pantalla a los 4 segundos para el siguiente alumno
         const autoClearReject = setTimeout(() => {
           resetKiosk();
         }, 6000);
@@ -102,10 +132,9 @@ export default function MembresiaStaff() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientData, showModal]);
 
-  // --- 3. AUTO-CERRAR MODAL DE ÉXITO ---
+  // --- 5. AUTO-CERRAR MODAL DE ÉXITO ---
   useEffect(() => {
     if (showModal) {
-      // Si fue EXITOSO, cerramos el modal a los 3 segundos
       const autoCloseSuccess = setTimeout(() => {
         resetKiosk();
       }, 5000);
@@ -113,16 +142,6 @@ export default function MembresiaStaff() {
     }
   }, [showModal]);
 
-  // --- CÁMARA WEB ---
-  useEffect(() => {
-    const scanner = new Html5QrcodeScanner("reader", {
-      fps: 10, qrbox: { width: 250, height: 250 },
-    });
-    scanner.render((result) => setMembershipId(result.toUpperCase()), () => {});
-    return () => scanner.clear().catch(err => console.error(err));
-  }, []);
-
-  // --- FUNCIÓN QUE MANDA EL DESCUENTO AL BACKEND ---
   const handleRegisterAttendance = async () => {
     if (!membershipId || !clientData) return;
     setLoading(true);
@@ -137,9 +156,8 @@ export default function MembresiaStaff() {
       if (res.ok) {
         setModalData({ ...data, alumno: clientData.nombre });
         setShowModal(true);
-        // NO reseteamos aquí, el Auto-Cerrar se encargará a los 3 segundos
       } else { 
-        alert(data.msg || "Error"); 
+        alert(data.msg || "Error al registrar asistencia"); 
       }
     } catch (error) { console.error("Error de conexión"); }
     finally { setLoading(false); }
@@ -177,7 +195,8 @@ export default function MembresiaStaff() {
         {/* IZQUIERDA: SCANNER */}
         <section className="space-y-6">
           <div className="bg-[#262626] rounded-[2.5rem] border border-white/10 overflow-hidden shadow-2xl">
-            <div id="reader" className="w-full pointer-events-none"></div>
+            {/* LE QUITAMOS EL POINTER-EVENTS-NONE PARA PODER ACEPTAR PERMISOS */}
+            <div id="reader" className="w-full"></div>
           </div>
           
           <div className="relative group">
@@ -237,7 +256,7 @@ export default function MembresiaStaff() {
               )}
 
               <button
-                disabled={true} // El botón ya no necesita pulsarse manualmente
+                disabled={true} 
                 className={`w-full py-6 rounded-2xl font-black uppercase text-xs tracking-[0.2em] transition-all flex items-center justify-center gap-3 shadow-xl
                   ${clientData.status === 'activa' ? 'bg-primary text-white shadow-primary/20' : 'bg-neutral-800 text-white/20'}`}
               >
