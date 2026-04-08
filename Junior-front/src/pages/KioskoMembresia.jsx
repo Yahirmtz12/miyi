@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Html5QrcodeScanner } from "html5-qrcode";
 import {
   FiCamera, FiSearch, FiActivity,
@@ -8,7 +8,6 @@ import {
 import { API_URL } from "../api";
 
 export default function MembresiaStaff() {
-  // --- LÓGICA INTACTA ---
   const [membershipId, setMembershipId] = useState("");
   const [loading, setLoading] = useState(false);
   const [searchingClient, setSearchingClient] = useState(false);
@@ -16,14 +15,53 @@ export default function MembresiaStaff() {
   const [showModal, setShowModal] = useState(false);
   const [modalData, setModalData] = useState(null);
 
+  // --- REFERENCIAS PARA EL ESCÁNER FÍSICO ---
+  const scannerBuffer = useRef("");
+  const scannerTimeout = useRef(null);
+
+  // --- FUNCIÓN DE LIMPIEZA TOTAL (RESET) ---
+  const resetKiosk = () => {
+    setMembershipId("");
+    setClientData(null);
+    setShowModal(false);
+    setModalData(null);
+  };
+
+  // --- 1. OYENTE GLOBAL DEL ESCÁNER ---
   useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (showModal && e.key === "Enter") setShowModal(false);
+    const handleGlobalKeyDown = (e) => {
+      // Si el modal está abierto y presionan Enter, lo cerramos rápido
+      if (showModal && e.key === "Enter") {
+        resetKiosk();
+        return;
+      }
+
+      // Evitar interferir si alguien está escribiendo manual en el input
+      const activeTag = document.activeElement.tagName;
+      if (activeTag === "INPUT" || activeTag === "TEXTAREA") return;
+
+      if (e.key === "Enter") {
+        if (scannerBuffer.current.length >= 5) {
+          setMembershipId(scannerBuffer.current.toUpperCase());
+        }
+        scannerBuffer.current = "";
+        return;
+      }
+
+      if (e.key.length === 1) {
+        scannerBuffer.current += e.key;
+        clearTimeout(scannerTimeout.current);
+        scannerTimeout.current = setTimeout(() => {
+          scannerBuffer.current = "";
+        }, 150);
+      }
     };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+
+    window.addEventListener("keydown", handleGlobalKeyDown);
+    return () => window.removeEventListener("keydown", handleGlobalKeyDown);
   }, [showModal]);
 
+  // --- BUSCAR INFORMACIÓN AL LEER CÓDIGO ---
   useEffect(() => {
     const fetchClientInfo = async () => {
       if (membershipId.length >= 5) {
@@ -44,6 +82,38 @@ export default function MembresiaStaff() {
     return () => clearTimeout(timer);
   }, [membershipId]);
 
+  // --- 2. AUTO-REGISTRO Y AUTO-LIMPIEZA DE RECHAZOS ---
+  useEffect(() => {
+    if (clientData) {
+      if (clientData.status === "activa" && !showModal) {
+        // Medio segundo de retraso para que el alumno alcance a ver su nombre
+        const autoRegisterTimer = setTimeout(() => {
+          handleRegisterAttendance();
+        }, 500);
+        return () => clearTimeout(autoRegisterTimer);
+      } else if (clientData.status !== "activa") {
+        // Si fue RECHAZADO, borramos la pantalla a los 4 segundos para el siguiente alumno
+        const autoClearReject = setTimeout(() => {
+          resetKiosk();
+        }, 4000);
+        return () => clearTimeout(autoClearReject);
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clientData, showModal]);
+
+  // --- 3. AUTO-CERRAR MODAL DE ÉXITO ---
+  useEffect(() => {
+    if (showModal) {
+      // Si fue EXITOSO, cerramos el modal a los 3 segundos
+      const autoCloseSuccess = setTimeout(() => {
+        resetKiosk();
+      }, 3000);
+      return () => clearTimeout(autoCloseSuccess);
+    }
+  }, [showModal]);
+
+  // --- CÁMARA WEB ---
   useEffect(() => {
     const scanner = new Html5QrcodeScanner("reader", {
       fps: 10, qrbox: { width: 250, height: 250 },
@@ -52,6 +122,7 @@ export default function MembresiaStaff() {
     return () => scanner.clear().catch(err => console.error(err));
   }, []);
 
+  // --- FUNCIÓN QUE MANDA EL DESCUENTO AL BACKEND ---
   const handleRegisterAttendance = async () => {
     if (!membershipId || !clientData) return;
     setLoading(true);
@@ -60,16 +131,17 @@ export default function MembresiaStaff() {
       const res = await fetch(`${API_URL}/api/users/register-attendance`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-        body: JSON.stringify({ membershipId, nombreClase: "Clase General" })
+        body: JSON.stringify({ membershipId, nombreClase: clientData.disciplina || "Clase General" })
       });
       const data = await res.json();
       if (res.ok) {
         setModalData({ ...data, alumno: clientData.nombre });
         setShowModal(true);
-        setMembershipId("");
-        setClientData(null);
-      } else { alert(data.msg || "Error"); }
-    } catch (error) { alert("Error de conexión"); }
+        // NO reseteamos aquí, el Auto-Cerrar se encargará a los 3 segundos
+      } else { 
+        alert(data.msg || "Error"); 
+      }
+    } catch (error) { console.error("Error de conexión"); }
     finally { setLoading(false); }
   };
 
@@ -85,7 +157,7 @@ export default function MembresiaStaff() {
   return (
     <div className="bg-[#1F1F1F] min-h-screen text-white font-sans">
       
-      {/* HEADER ESTILO INVENTARIO */}
+      {/* HEADER */}
       <header className="p-4 md:p-8 pb-4 flex flex-col gap-4 md:gap-6 shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3 md:gap-4">
@@ -105,7 +177,7 @@ export default function MembresiaStaff() {
         {/* IZQUIERDA: SCANNER */}
         <section className="space-y-6">
           <div className="bg-[#262626] rounded-[2.5rem] border border-white/10 overflow-hidden shadow-2xl">
-            <div id="reader" className="w-full"></div>
+            <div id="reader" className="w-full pointer-events-none"></div>
           </div>
           
           <div className="relative group">
@@ -130,10 +202,10 @@ export default function MembresiaStaff() {
                   <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${getStatusColor(clientData.status)}`}>
                     Membresía {clientData.status.replace('_', ' ')}
                   </span>
-                  <h3 className="text-3xl font-black uppercase italic tracking-tighter mt-3 text-white">{clientData.nombre}</h3>
-                  <p className="text-white/40 text-[10px] font-bold mt-1 tracking-widest uppercase">{membershipId}</p>
+                  <h3 className="text-3xl font-black uppercase italic tracking-tighter mt-3 text-white line-clamp-1">{clientData.nombre}</h3>
+                  <p className="text-white/40 text-[10px] font-bold mt-1 tracking-widest uppercase">{membershipId} • {clientData.disciplina || "Sin disciplina"}</p>
                 </div>
-                <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
+                <div className="p-4 bg-white/5 rounded-2xl border border-white/5 shrink-0">
                   <FiUser className="text-white/20 w-6 h-6" />
                 </div>
               </div>
@@ -158,37 +230,42 @@ export default function MembresiaStaff() {
               </div>
 
               {clientData.status !== "activa" && (
-                <div className="p-4 bg-red-400/10 border border-red-400/20 rounded-2xl flex items-center gap-3">
+                <div className="p-4 bg-red-400/10 border border-red-400/20 rounded-2xl flex items-center gap-3 animate-pulse">
                   <FiAlertCircle className="text-red-400 shrink-0" />
                   <p className="text-red-400 text-[10px] font-bold uppercase italic">{clientData.mensaje}</p>
                 </div>
               )}
 
               <button
-                onClick={handleRegisterAttendance}
-                disabled={loading || clientData.status !== "activa"}
-                className={`w-full py-6 rounded-2xl font-black uppercase text-xs tracking-[0.2em] transition-all flex items-center justify-center gap-3 active:scale-[0.98] shadow-xl disabled:opacity-20
-                  ${clientData.status === 'activa' ? 'bg-primary text-white shadow-primary/20' : 'bg-neutral-800 text-white/40'}`}
+                disabled={true} // El botón ya no necesita pulsarse manualmente
+                className={`w-full py-6 rounded-2xl font-black uppercase text-xs tracking-[0.2em] transition-all flex items-center justify-center gap-3 shadow-xl
+                  ${clientData.status === 'activa' ? 'bg-primary text-white shadow-primary/20' : 'bg-neutral-800 text-white/20'}`}
               >
-                {loading ? <FiLoader className="animate-spin" /> : "Registrar Entrada"}
+                {loading ? (
+                  <><FiLoader className="animate-spin" /> Auto-registrando...</>
+                ) : clientData.status === 'activa' ? (
+                  "Procesando acceso..."
+                ) : (
+                  "Acceso Denegado"
+                )}
               </button>
             </div>
           ) : (
             <div className="h-full min-h-[400px] flex flex-col items-center justify-center text-center p-12 border-2 border-dashed border-white/5 rounded-[2.5rem] opacity-30">
               <FiCamera size={40} className="mb-4 text-white/20" />
-              <p className="text-[10px] font-black uppercase tracking-[0.2em]">Esperando escaneo de pase</p>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em]">Acerca tu código QR al escáner</p>
             </div>
           )}
         </section>
       </main>
 
-      {/* MODAL DE ÉXITO ESTILO INVENTARIO */}
+      {/* MODAL DE ÉXITO */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
           <div className="bg-[#262626] w-full max-w-sm rounded-[2.5rem] border border-white/10 shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
             <div className="p-6 flex justify-between items-center border-b border-white/5">
               <h3 className="text-sm font-black uppercase tracking-tighter italic text-secondary">Acceso Permitido</h3>
-              <button onClick={() => setShowModal(false)} className="text-white/40 hover:text-white transition p-2 bg-white/5 rounded-full">
+              <button onClick={() => resetKiosk()} className="text-white/40 hover:text-white transition p-2 bg-white/5 rounded-full">
                 <FiX size={18} />
               </button>
             </div>
@@ -200,13 +277,13 @@ export default function MembresiaStaff() {
               <div>
                 <h2 className="text-xl font-black uppercase italic tracking-tight">{modalData?.alumno}</h2>
                 <div className="mt-4 bg-black/40 py-4 rounded-2xl border border-white/5">
-                  <p className="text-[10px] font-black uppercase text-white/20 mb-1 tracking-widest">Quedan</p>
+                  <p className="text-[10px] font-black uppercase text-white/20 mb-1 tracking-widest">Te quedan</p>
                   <p className="text-3xl font-black text-white">{modalData?.clasesRestantes} <span className="text-xs uppercase italic text-secondary">clases</span></p>
                 </div>
               </div>
-              <button onClick={() => setShowModal(false)} className="w-full bg-primary text-white font-black py-5 rounded-2xl uppercase tracking-widest text-[10px] shadow-lg shadow-primary/20 transition-all active:scale-95">
-                Listo (Enter)
-              </button>
+              <p className="text-[9px] uppercase tracking-widest text-white/30 animate-pulse">
+                La pantalla se limpiará automáticamente...
+              </p>
             </div>
           </div>
         </div>
