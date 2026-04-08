@@ -225,6 +225,7 @@ exports.getMemberById = async (req, res) => {
     res.status(200).json({
       nombre: user.nombre,
       clasesDisponibles: user.clasesDisponibles,
+      disciplina: user.disciplina, // <--- Aquí pasamos la disciplina al escáner
       fechaVencimiento: user.fechaVencimiento,
       status: estadoMembresia, // Esto te servirá para poner colores (Rojo/Verde) en React
       mensaje: mensajeEstado
@@ -237,20 +238,29 @@ exports.getMemberById = async (req, res) => {
 };
 exports.renewMembership = async (req, res) => {
   try {
-    const { membershipId, cantidadClases } = req.body;
+    // 1. Agregamos 'disciplina' a los datos que recibimos del body
+    const { membershipId, cantidadClases, disciplina } = req.body;
     
     // Calculamos la fecha actual + 30 días
     const nuevaFechaVencimiento = new Date();
     nuevaFechaVencimiento.setDate(nuevaFechaVencimiento.getDate() + 30);
 
+    // 2. Preparamos el objeto con los datos a actualizar
+    const datosActualizar = { 
+      clasesDisponibles: cantidadClases, 
+      fechaVencimiento: nuevaFechaVencimiento,
+      asistencias: [] // Reiniciamos las asistencias del mes
+    };
+
+    // 3. Validamos: Si mandaron una disciplina nueva, la agregamos a la actualización
+    if (disciplina) {
+      datosActualizar.disciplina = disciplina;
+    }
+
     const alumnoActualizado = await User.findOneAndUpdate(
       { membershipId: membershipId },
-      { 
-        clasesDisponibles: cantidadClases , // Suma las clases nuevas a las que ya tenía (si aplica)
-        fechaVencimiento: nuevaFechaVencimiento ,
-        asistencias: []
-      },
-      { new: true } // Retorna el documento actualizado
+      datosActualizar, // Usamos nuestro objeto dinámico
+      { new: true } 
     );
 
     if (!alumnoActualizado) {

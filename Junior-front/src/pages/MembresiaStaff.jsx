@@ -8,7 +8,6 @@ import {
 import { API_URL } from "../api";
 
 export default function MembresiaCaja() {
-  // --- MANTENEMOS TODA LA LÓGICA ORIGINAL ---
   const [membershipId, setMembershipId] = useState("");
   const [loading, setLoading] = useState(false);
   const [searchingClient, setSearchingClient] = useState(false);
@@ -16,6 +15,7 @@ export default function MembresiaCaja() {
   const [cantidadClases, setCantidadClases] = useState(8);
   const [montoCobrado, setMontoCobrado] = useState("");
   const [nuevaFechaVencimiento, setNuevaFechaVencimiento] = useState("");
+  const [disciplina, setDisciplina] = useState(""); // <-- NUEVO ESTADO
   const [showModal, setShowModal] = useState(false);
   const [modalData, setModalData] = useState(null);
 
@@ -38,10 +38,21 @@ export default function MembresiaCaja() {
           if (res.ok) {
             setClientData(data);
             setNuevaFechaVencimiento(calcularFechaDefault());
-          } else { setClientData(null); }
-        } catch (error) { console.error("Error"); }
-        finally { setSearchingClient(false); }
-      } else { setClientData(null); }
+            // Llenamos el input con la disciplina actual (si la tiene)
+            setDisciplina(data.disciplina || ""); 
+          } else { 
+            setClientData(null); 
+            setDisciplina("");
+          }
+        } catch (error) { 
+          console.error("Error"); 
+        } finally { 
+          setSearchingClient(false); 
+        }
+      } else { 
+        setClientData(null); 
+        setDisciplina("");
+      }
     };
     const timer = setTimeout(fetchClientInfo, 500);
     return () => clearTimeout(timer);
@@ -63,7 +74,14 @@ export default function MembresiaCaja() {
       const res = await fetch(`${API_URL}/api/users/renew-membership`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-        body: JSON.stringify({ membershipId, cantidadClases, nuevaFechaVencimiento, monto: montoCobrado })
+        // Enviamos la disciplina al backend
+        body: JSON.stringify({ 
+          membershipId, 
+          cantidadClases, 
+          nuevaFechaVencimiento, 
+          monto: montoCobrado,
+          disciplina 
+        })
       });
       const data = await res.json();
       if (res.ok) {
@@ -71,6 +89,7 @@ export default function MembresiaCaja() {
         setShowModal(true);
         setMembershipId("");
         setClientData(null);
+        setDisciplina(""); // Limpiamos al terminar
       }
     } catch (error) { alert("Error"); }
     finally { setLoading(false); }
@@ -146,7 +165,21 @@ export default function MembresiaCaja() {
                   </div>
                 </div>
 
-                {/* GRID DE INPUTS */}
+                {/* DISCIPLINA (NUEVO CAMPO) */}
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-white/30 tracking-widest ml-2 flex items-center gap-2">
+                    <FiEdit3 className="text-primary" /> Disciplina Inscrita
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="EJ: SALSA, URBANO, RITMOS LATINOS..."
+                    value={disciplina}
+                    onChange={(e) => setDisciplina(e.target.value.toUpperCase())}
+                    className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 px-5 text-white focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none font-bold transition-all placeholder:text-white/10 uppercase"
+                  />
+                </div>
+
+                {/* GRID DE INPUTS (CLASES Y MONTO) */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase text-white/30 tracking-widest ml-2 flex items-center gap-2">
@@ -171,7 +204,7 @@ export default function MembresiaCaja() {
                     <div className="relative group">
                       <input
                         type="number"
-                        required // CAMPO OBLIGATORIO
+                        required 
                         placeholder="0.00"
                         value={montoCobrado}
                         onChange={(e) => setMontoCobrado(e.target.value)}
@@ -196,14 +229,13 @@ export default function MembresiaCaja() {
                   />
                 </div>
 
-                {/* BOTÓN DE ACCIÓN ACCIDENTADO (GLASS) */}
+                {/* BOTÓN DE ACCIÓN */}
                 <div className="pt-4">
                   <button
                     type="submit"
                     disabled={loading}
                     className="w-full relative overflow-hidden group bg-primary text-white font-black py-5 rounded-2xl shadow-[0_10px_30px_rgba(197,164,115,0.3)] hover:shadow-primary/40 transition-all active:scale-[0.98]"
                   >
-                    {/* Efecto de brillo al pasar el mouse */}
                     <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 pointer-events-none" />
 
                     <div className="relative z-10 flex justify-center items-center gap-3 uppercase tracking-[0.2em] text-xs">
@@ -219,7 +251,7 @@ export default function MembresiaCaja() {
                   </button>
 
                   <p className="text-[8px] text-center text-white/20 uppercase font-black tracking-widest mt-4">
-                    Esta acción actualizará clases disponibles y la vigencia del socio inmediatamente
+                    Esta acción actualizará clases disponibles, disciplina y vigencia del socio inmediatamente
                   </p>
                 </div>
               </form>
@@ -237,7 +269,7 @@ export default function MembresiaCaja() {
         </div>
       </main>
 
-      {/* MODAL DE ÉXITO ESTILO INVENTARIO */}
+      {/* MODAL DE ÉXITO */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
           <div className="bg-[#262626] w-full max-w-md rounded-[2.5rem] border border-white/10 shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
