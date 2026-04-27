@@ -14,6 +14,7 @@ export default function MembresiaStaff() {
   const [clientData, setClientData] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [modalData, setModalData] = useState(null);
+  const lastScannedRef = useRef({ id: "", time: 0 });
 
   const scannerBuffer = useRef("");
   const scannerTimeout = useRef(null);
@@ -144,6 +145,13 @@ export default function MembresiaStaff() {
 
   const handleRegisterAttendance = async () => {
     if (!membershipId || !clientData) return;
+    
+    const now = Date.now();
+    if (lastScannedRef.current.id === membershipId && now - lastScannedRef.current.time < 6000) {
+       console.log("Ignorando escaneo repetido (cooldown)");
+       return;
+    }
+    
     setLoading(true);
     const token = localStorage.getItem("token");
     try {
@@ -154,6 +162,7 @@ export default function MembresiaStaff() {
       });
       const data = await res.json();
       if (res.ok) {
+        lastScannedRef.current = { id: membershipId, time: now };
         setModalData({ ...data, alumno: clientData.nombre });
         setShowModal(true);
       } else { 

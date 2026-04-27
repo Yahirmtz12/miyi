@@ -238,17 +238,22 @@ exports.getMemberById = async (req, res) => {
 };
 exports.renewMembership = async (req, res) => {
   try {
-    // 1. Agregamos 'disciplina' a los datos que recibimos del body
-    const { membershipId, cantidadClases, disciplina } = req.body;
+    // 1. Agregamos 'disciplina' y 'nuevaFechaVencimiento' a los datos que recibimos del body
+    const { membershipId, cantidadClases, disciplina, nuevaFechaVencimiento } = req.body;
     
-    // Calculamos la fecha actual + 30 días
-    const nuevaFechaVencimiento = new Date();
-    nuevaFechaVencimiento.setDate(nuevaFechaVencimiento.getDate() + 30);
+    let fechaVencimientoObj = new Date();
+    if (nuevaFechaVencimiento) {
+      // Si el frontend manda una fecha (YYYY-MM-DD), la respetamos
+      fechaVencimientoObj = new Date(nuevaFechaVencimiento + 'T12:00:00');
+    } else {
+      // Calculamos la fecha actual + 30 días por defecto
+      fechaVencimientoObj.setDate(fechaVencimientoObj.getDate() + 30);
+    }
 
     // 2. Preparamos el objeto con los datos a actualizar
     const datosActualizar = { 
       clasesDisponibles: cantidadClases, 
-      fechaVencimiento: nuevaFechaVencimiento,
+      fechaVencimiento: fechaVencimientoObj,
       asistencias: [] // Reiniciamos las asistencias del mes
     };
 
