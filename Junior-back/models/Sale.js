@@ -10,7 +10,20 @@ const saleSchema = new mongoose.Schema({
       },
       nombre: String,
       cantidad: Number,
-      precio: Number
+      precio: Number,
+      // Extras seleccionados para este producto en esta venta
+      extras: [
+        {
+          extraId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Extra'
+          },
+          nombre: String,
+          precio: Number
+        }
+      ],
+      // Subtotal = (precio + suma de extras) * cantidad
+      subtotal: Number
     }
   ],
   total: {

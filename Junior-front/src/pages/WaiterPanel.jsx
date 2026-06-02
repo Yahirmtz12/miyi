@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import {
     FiShoppingCart, FiPlus, FiMinus, FiSearch,
     FiPlusSquare, FiSend, FiLoader, FiCoffee, FiGrid,
@@ -6,6 +6,7 @@ import {
     FiPrinter, FiMessageCircle, FiAlertCircle
 } from "react-icons/fi";
 import { API_URL } from "../api";
+import ExtrasModal from "../components/ExtrasModal";
 import qz from "qz-tray";
 
 export default function WaiterPanel() {
@@ -22,6 +23,13 @@ export default function WaiterPanel() {
     const [modal, setModal] = useState({ open: false, message: "", tipo: "info" });
     const [phone, setPhone] = useState("");
 
+    // Extras state
+    const [extrasModal, setExtrasModal] = useState({ open: false, product: null });
+    const [currentExtras, setCurrentExtras] = useState([]);
+    const [loadingExtras, setLoadingExtras] = useState(false);
+    const [categories, setCategories] = useState([]);
+    const extrasCache = useRef(new Map());
+
     const itemsNuevos = order.filter(item => !savedOrder.some(saved => saved._id === item._id));
     const itemsAnteriores = order.filter(item => savedOrder.some(saved => saved._id === item._id));
     const userRole = localStorage.getItem("userRole"); 
@@ -32,7 +40,7 @@ export default function WaiterPanel() {
     const esMovil = () => /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
     // --- VALORES CALCULADOS ---
-    const total = useMemo(() => order.reduce((a, i) => a + i.precio * i.qty, 0), [order]);
+    const total = useMemo(() => order.reduce((a, i) => a + (i.totalUnitPrice || i.precio) * i.qty, 0), [order]);
     const filteredProducts = useMemo(() =>
         products.filter(p => p.nombre.toLowerCase().includes(searchTerm.toLowerCase())),
         [products, searchTerm]
@@ -42,6 +50,7 @@ export default function WaiterPanel() {
     useEffect(() => {
         fetchTables();
         fetchProducts();
+        fetchCategories();
     }, []);
 
     useEffect(() => {
@@ -92,9 +101,29 @@ export default function WaiterPanel() {
         try {
             const res = await fetch(`${API_URL}/api/products`, { headers: { Authorization: `Bearer ${token}` } });
             const data = await res.json();
-            if (Array.isArray(data)) setProducts(data.filter(p => p.categoria === "Venta"));
+            if (Array.isArray(data)) setProducts(data.filter(p => p.tipo === "Venta" || p.categoria === "Venta"));
         } catch (err) { console.error("Error products:", err); }
     };
+
+    const fetchCategories = async () => {
+        try {
+            const res = await fetch(`${API_URL}/api/categories`, { headers: { Authorization: `Bearer ${token}` } });
+            const data = await res.json();
+            if (Array.isArray(data)) setCategories(data);
+        } catch (err) { console.error("Error categories:", err); }
+    };
+
+    const fetchExtrasForCategory = useCallback(async (categoryId) => {
+        if (!categoryId) return [];
+        if (extrasCache.current.has(categoryId)) return extrasCache.current.get(categoryId);
+        try {
+            const res = await fetch(`${API_URL}/api/products/${categoryId}/extras`, { headers: { Authorization: `Bearer ${token}` } });
+            const data = await res.json();
+            const extras = Array.isArray(data) ? data : [];
+            extrasCache.current.set(categoryId, extras);
+            return extras;
+        } catch { return []; }
+    }, [token]);
 
     const fetchOrderDetails = async (tableId) => {
         try {
@@ -156,12 +185,44 @@ export default function WaiterPanel() {
     };
 
     // --- LÓGICA DE CARRITO ---
-    const addToOrder = (product) => {
+    const handleProductClick = async (product) => {
         if (!selectedTable) return alert("Selecciona una mesa");
+        const categoryId = product.categoryId?._id || product.categoryId;
+        if (!categoryId) {
+            addToOrderDirect(product, []);
+            return;
+        }
+        setLoadingExtras(true);
+        setExtrasModal({ open: true, product });
+        const extras = await fetchExtrasForCategory(categoryId);
+        setCurrentExtras(extras);
+        setLoadingExtras(false);
+        if (extras.length === 0) {
+            addToOrderDirect(product, []);
+            setExtrasModal({ open: false, product: null });
+        }
+    };
+
+    const handleExtrasConfirm = (product, selectedExtras) => {
+        addToOrderDirect(product, selectedExtras);
+    };
+
+    const addToOrderDirect = (product, extras = []) => {
+        const extrasKey = extras.map(e => e._id).sort().join(',');
+        const extrasTotal = extras.reduce((sum, e) => sum + e.precio, 0);
         setOrder(prev => {
-            const existingInNew = prev.find(p => p._id === product._id && p.isNew);
-            if (existingInNew) return prev.map(p => (p._id === product._id && p.isNew) ? { ...p, qty: p.qty + 1 } : p);
-            return [...prev, { ...product, qty: 1, isNew: true, notas: "" }];
+            const existingInNew = prev.find(p => p._id === product._id && p.isNew && (p.extrasKey || '') === extrasKey);
+            if (existingInNew) return prev.map(p => (p._id === product._id && p.isNew && (p.extrasKey || '') === extrasKey) ? { ...p, qty: p.qty + 1 } : p);
+            return [...prev, {
+                ...product,
+                qty: 1,
+                isNew: true,
+                notas: "",
+                extras: extras.map(e => ({ extraId: e._id, nombre: e.nombre, precio: e.precio })),
+                extrasKey,
+                extrasTotal,
+                totalUnitPrice: product.precio + extrasTotal
+            }];
         });
     };
 
@@ -190,7 +251,8 @@ export default function WaiterPanel() {
                 nombre: item.nombre,
                 cantidad: item.qty,
                 precio: item.precio,
-                notas: item.notas
+                notas: item.notas,
+                extras: item.extras || []
             }));
 
             const res = await fetch(isUpdate ? `${API_URL}/api/orders/table/${selectedTable._id}` : `${API_URL}/api/orders`, {
@@ -430,7 +492,7 @@ export default function WaiterPanel() {
                 <div className="flex-1 overflow-y-auto p-4 md:p-8 pt-6 custom-scrollbar ">
                     <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 md:gap-6 pb-24">
                         {filteredProducts.map(product => (
-                            <div key={product._id} onClick={() => addToOrder(product)} className="group relative bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden cursor-pointer hover:border-primary/50 transition-all duration-300 shadow-xl active:scale-95">
+                            <div key={product._id} onClick={() => handleProductClick(product)} className="group relative bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden cursor-pointer hover:border-primary/50 transition-all duration-300 shadow-xl active:scale-95">
                                 <div className="aspect-square relative overflow-hidden">
                                     <img src={product.imagen} alt={product.nombre} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 opacity-80 group-hover:opacity-100" />
                                     <div className="absolute inset-0 bg-gradient-to-t from-[#1F1F1F] via-transparent to-transparent opacity-80" />
@@ -486,7 +548,14 @@ export default function WaiterPanel() {
                                         <div className="flex items-center justify-between">
                                             <div className="flex-1 min-w-0">
                                                 <p className="text-white font-bold text-sm truncate uppercase tracking-tight">{item.nombre}</p>
-                                                <p className="text-secondary font-black text-xs mt-1">${(item.precio * item.qty).toFixed(2)}</p>
+                                                {item.extras && item.extras.length > 0 && (
+                                                    <div className="mt-1 flex flex-wrap gap-1">
+                                                        {item.extras.map((e, idx) => (
+                                                            <span key={idx} className="text-[8px] bg-primary/20 text-primary px-1.5 py-0.5 rounded-md font-bold uppercase tracking-wider">+ {e.nombre}</span>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                                <p className="text-secondary font-black text-xs mt-1">${((item.totalUnitPrice || item.precio) * item.qty).toFixed(2)}</p>
                                             </div>
                                             <div className="flex items-center gap-2 md:gap-3 ml-4 bg-black/40 rounded-xl p-1 border border-white/10">
                                                 <button onClick={() => updateQty(item._id, -1)} className="w-8 h-8 flex items-center justify-center text-white/40 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all"><FiMinus size={14} /></button>
@@ -634,6 +703,15 @@ export default function WaiterPanel() {
                     </div>
                 </div>
             )}
+            {/* Modal de Extras */}
+            <ExtrasModal
+                isOpen={extrasModal.open}
+                onClose={() => setExtrasModal({ open: false, product: null })}
+                product={extrasModal.product}
+                extras={currentExtras}
+                onConfirm={handleExtrasConfirm}
+                loading={loadingExtras}
+            />
         </div>
     );
 }

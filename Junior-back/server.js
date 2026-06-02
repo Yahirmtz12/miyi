@@ -38,6 +38,7 @@ const expenseRoutes = require('./routes/expense.routes');
 const membershipRoutes = require('./routes/membership.routes');
 const orderRoutes = require('./routes/order.routes'); // <-- ¡No olvides esta!
 const tableRoutes = require('./routes/table.routes'); // <-- Ruta de mesas
+const categoryRoutes = require('./routes/category.routes'); // <-- Ruta de categorías y extras
 
 // --- REGISTRO DE RUTAS ---
 app.use('/api/products', productRoutes);
@@ -48,6 +49,7 @@ app.use('/api/expenses', expenseRoutes);
 app.use('/api/membership', membershipRoutes);
 app.use('/api/orders', orderRoutes); // Ruta para Comandas/Cocina
 app.use('/api/tables', tableRoutes); // Ruta para Gestión de Mesas
+app.use('/api/categories', categoryRoutes); // Ruta para Categorías y Extras
 
 // Ruta prueba
 app.get('/', (req, res) => {

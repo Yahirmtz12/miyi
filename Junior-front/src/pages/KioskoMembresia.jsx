@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from "react";
-import { Html5QrcodeScanner } from "html5-qrcode";
 import {
-  FiCamera, FiSearch, FiActivity,
-  FiCalendar, FiClock, FiLoader, 
+  FiSearch, FiActivity,
+  FiCalendar, FiLoader, 
   FiUser, FiX, FiCheckCircle, FiAlertCircle
 } from "react-icons/fi";
 import { API_URL } from "../api";
@@ -65,35 +64,7 @@ export default function MembresiaStaff() {
     };
   }, [showModal]);
 
-  // --- 2. CÁMARA WEB (Html5QrcodeScanner) ARREGLADA ---
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      const scanner = new Html5QrcodeScanner("reader", {
-        fps: 10, 
-        qrbox: { width: 250, height: 250 },
-        formatsToSupport: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15] 
-      }, false);
-
-      scanner.render(
-        (result) => {
-          scanner.pause(true); // Pausa para no leer a lo loco
-          setMembershipId(result.toUpperCase());
-          setTimeout(() => { if (scanner.getState() === 2) scanner.resume(); }, 4000); // Reanuda tras 4 seg
-        },
-        (error) => {
-          // Ignoramos errores de búsqueda vacía
-        }
-      );
-
-      return () => {
-        scanner.clear().catch(err => console.error("Error limpiando scanner:", err));
-      };
-    }, 100);
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  // --- 3. BUSCAR INFORMACIÓN AL LEER CÓDIGO ---
+  // --- 2. BUSCAR INFORMACIÓN AL LEER CÓDIGO ---
   useEffect(() => {
     const fetchClientInfo = async () => {
       if (membershipId.length >= 5) {
@@ -115,7 +86,7 @@ export default function MembresiaStaff() {
     return () => clearTimeout(timer);
   }, [membershipId]);
 
-  // --- 4. AUTO-REGISTRO Y AUTO-LIMPIEZA DE RECHAZOS ---
+  // --- 3. AUTO-REGISTRO Y AUTO-LIMPIEZA DE RECHAZOS ---
   useEffect(() => {
     if (clientData) {
       if (clientData.status === "activa" && !showModal) {
@@ -133,7 +104,7 @@ export default function MembresiaStaff() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientData, showModal]);
 
-  // --- 5. AUTO-CERRAR MODAL DE ÉXITO ---
+  // --- 4. AUTO-CERRAR MODAL DE ÉXITO ---
   useEffect(() => {
     if (showModal) {
       const autoCloseSuccess = setTimeout(() => {
@@ -201,11 +172,17 @@ export default function MembresiaStaff() {
 
       <main className="p-4 md:p-8 grid grid-cols-1 lg:grid-cols-2 gap-10 max-w-7xl mx-auto">
         
-        {/* IZQUIERDA: SCANNER */}
+        {/* IZQUIERDA: BÚSQUEDA (sin cámara) */}
         <section className="space-y-6">
-          <div className="bg-[#262626] rounded-[2.5rem] border border-white/10 overflow-hidden shadow-2xl">
-            {/* LE QUITAMOS EL POINTER-EVENTS-NONE PARA PODER ACEPTAR PERMISOS */}
-            <div id="reader" className="w-full"></div>
+          {/* Indicador visual del lector físico */}
+          <div className="bg-[#262626] rounded-[2.5rem] border border-white/10 overflow-hidden shadow-2xl p-10 flex flex-col items-center justify-center text-center min-h-[250px]">
+            <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mb-6 border border-primary/20">
+              <FiActivity size={36} className="text-primary animate-pulse" />
+            </div>
+            <p className="text-sm font-black uppercase tracking-widest text-white/40 mb-2">Lector QR Activo</p>
+            <p className="text-[10px] text-white/20 uppercase tracking-widest max-w-[280px] leading-relaxed">
+              Acerca el código QR al lector físico o busca manualmente abajo
+            </p>
           </div>
           
           <div className="relative group">
@@ -280,8 +257,8 @@ export default function MembresiaStaff() {
             </div>
           ) : (
             <div className="h-full min-h-[400px] flex flex-col items-center justify-center text-center p-12 border-2 border-dashed border-white/5 rounded-[2.5rem] opacity-30">
-              <FiCamera size={40} className="mb-4 text-white/20" />
-              <p className="text-[10px] font-black uppercase tracking-[0.2em]">Acerca tu código QR al escáner</p>
+              <FiSearch size={40} className="mb-4 text-white/20" />
+              <p className="text-[10px] font-black uppercase tracking-[0.2em]">Acerca tu código QR al lector</p>
             </div>
           )}
         </section>

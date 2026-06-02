@@ -265,12 +265,24 @@ export default function History() {
             <div className="p-8 space-y-6 max-h-[60vh] overflow-y-auto">
               <div className="space-y-3">
                 {selectedSale.productos.map((item, idx) => (
-                  <div key={idx} className="flex justify-between items-center border-b border-white/5 pb-3">
-                    <div className="flex gap-4 items-center">
-                      <span className="w-10 h-10 flex items-center justify-center bg-black/40 rounded-xl text-secondary font-black text-xs border border-white/5">{item.cantidad}</span>
-                      <span className="text-white/70 font-bold text-xs uppercase tracking-wide italic">{item.nombre}</span>
+                  <div key={idx} className="border-b border-white/5 pb-3">
+                    <div className="flex justify-between items-center">
+                      <div className="flex gap-4 items-center">
+                        <span className="w-10 h-10 flex items-center justify-center bg-black/40 rounded-xl text-secondary font-black text-xs border border-white/5">{item.cantidad}</span>
+                        <span className="text-white/70 font-bold text-xs uppercase tracking-wide italic">{item.nombre}</span>
+                      </div>
+                      <span className="text-white font-black text-sm tracking-tighter">${(item.subtotal || item.cantidad * item.precio).toFixed(2)}</span>
                     </div>
-                    <span className="text-white font-black text-sm tracking-tighter">${(item.cantidad * item.precio).toFixed(2)}</span>
+                    {/* Extras de este producto */}
+                    {item.extras && item.extras.length > 0 && (
+                      <div className="ml-14 mt-2 flex flex-wrap gap-1.5">
+                        {item.extras.map((extra, eidx) => (
+                          <span key={eidx} className="text-[9px] bg-primary/15 text-primary/80 px-2 py-0.5 rounded-md font-bold uppercase tracking-wider border border-primary/20">
+                            + {extra.nombre} (${extra.precio.toFixed(2)})
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

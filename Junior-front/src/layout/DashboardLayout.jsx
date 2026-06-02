@@ -1,7 +1,8 @@
 import { Outlet, NavLink, Navigate } from "react-router-dom";
 import { useState } from "react";
-import { FiMenu, FiLogOut, FiX } from "react-icons/fi"; // Añadimos FiX para cerrar
+import { FiMenu, FiLogOut, FiX } from "react-icons/fi";
 import logoEmpresa from "../assets/logo.png";
+import AttendanceListener from "../components/AttendanceListener";
 
 export default function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false); // Iniciamos cerrado
@@ -16,13 +17,11 @@ export default function DashboardLayout() {
 
   const allNavItems = [
     { to: "/dashboard/sales", label: "Ventas", icon: "shopping_bag", roles: ['admin', 'cajero'] },
-    { to: "/dashboard/mesero", label: "Mesas", icon: "grid_view", roles: ['admin', 'mesero','cajero'] },
-    { to: "/dashboard/kitchen", label: "Cocina", icon: "restaurant", roles: ['admin', 'cocinero'] },
+    { to: "/dashboard/users", label: "Usuarios", icon: "group", roles: ['admin'] },
     { to: "/dashboard/loyalty", label: "Membresía", icon: "redeem", roles: ['admin', 'cajero'] },
     { to: "/dashboard/kiosko", label: "Kiosko", icon: "backpack", roles: ['admin', 'kiosko', 'cajero'] },
     { to: "/dashboard/inventory", label: "Inventario", icon: "inventory_2", roles: ['admin'] },
     { to: "/dashboard/reports", label: "Análisis", icon: "analytics", roles: ['admin'] },
-    { to: "/dashboard/users", label: "Usuarios", icon: "group", roles: ['admin'] },
     { to: "/dashboard/history", label: "Historial", icon: "history", roles: ['admin', 'cajero'] },
     { to: "/dashboard/expenses", label: "Gastos", icon: "receipt_long", roles: ['admin', 'cajero'] },
   ];
@@ -31,6 +30,9 @@ export default function DashboardLayout() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#1F1F1F]">
+
+      {/* Listener global de asistencias — siempre escuchando el lector QR */}
+      <AttendanceListener />
 
       {/* OVERLAY: Fondo oscuro cuando el menú está abierto en móvil */}
       {sidebarOpen && (

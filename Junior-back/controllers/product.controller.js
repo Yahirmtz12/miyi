@@ -56,7 +56,9 @@ exports.createProduct = async (req, res) => {
 // --- LISTAR PRODUCTOS ---
 exports.getProducts = async (req, res) => {
   try {
-    const products = await Product.find().sort({ createdAt: -1 });
+    const products = await Product.find()
+      .populate('categoryId', 'nombre')
+      .sort({ createdAt: -1 });
     res.json(products);
   } catch (error) {
     res.status(500).json({ msg: 'Error al obtener productos' });

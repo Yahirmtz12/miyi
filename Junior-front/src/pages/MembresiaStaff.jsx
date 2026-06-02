@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { Html5QrcodeScanner } from "html5-qrcode";
 import {
-  FiCamera, FiSearch, FiDollarSign,
+  FiSearch, FiDollarSign,
   FiCalendar, FiHash, FiCreditCard,
   FiLoader, FiUser, FiCheckCircle, FiX, FiPlus, FiEdit3, FiPrinter
 } from "react-icons/fi";
@@ -68,39 +67,7 @@ export default function MembresiaCaja() {
     };
   }, []);
 
-  // --- 2. ESCÁNER DE CÁMARA (Html5QrcodeScanner) ARREGLADO ---
-  useEffect(() => {
-    // Retrasamos un poco la inicialización para asegurar que el DOM cargó
-    const timer = setTimeout(() => {
-      const scanner = new Html5QrcodeScanner("reader-caja", {
-        fps: 10,
-        qrbox: { width: 250, height: 250 },
-        // Evitamos que intente usar formatos raros que puedan crashear
-        formatsToSupport: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15] 
-      }, false); // El false al final es importante para no verbosity
-
-      scanner.render(
-        (result) => {
-          // Cuando la cámara lee algo, pausamos el escáner para no leer doble
-          scanner.pause(true);
-          setMembershipId(result.toUpperCase());
-          // Lo reanudamos después de un ratito
-          setTimeout(() => { if (scanner.getState() === 2) scanner.resume(); }, 2000);
-        },
-        (error) => {
-          // Ignoramos los errores constantes de "no se encontró código"
-        }
-      );
-
-      return () => {
-        scanner.clear().catch(err => console.error("Error limpiando scanner:", err));
-      };
-    }, 100);
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  // --- 3. BÚSQUEDA DEL CLIENTE AL CAMBIAR membershipId ---
+  // --- 2. BÚSQUEDA DEL CLIENTE AL CAMBIAR membershipId ---
   useEffect(() => {
     const fetchClientInfo = async () => {
       if (membershipId.length >= 5) {
@@ -268,11 +235,14 @@ export default function MembresiaCaja() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
 
-          {/* SECCIÓN SCANNER (IZQUIERDA) */}
+          {/* SECCIÓN SCANNER (sin cámara — solo lector físico) */}
           <section className="space-y-6">
-            <div className="bg-[#262626] rounded-[2.5rem] border border-white/10 overflow-hidden shadow-2xl">
-              {/* Le quitamos el pointer-events-none para que se pueda interactuar con la cámara */}
-              <div id="reader-caja" className="w-full"></div>
+            <div className="bg-[#262626] rounded-[2.5rem] border border-white/10 overflow-hidden shadow-2xl p-10 flex flex-col items-center justify-center text-center min-h-[200px]">
+              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4 border border-primary/20">
+                <FiSearch size={28} className="text-primary animate-pulse" />
+              </div>
+              <p className="text-xs font-black uppercase tracking-widest text-white/40 mb-1">Lector QR Activo</p>
+              <p className="text-[9px] text-white/20 uppercase tracking-widest">Escanea la membresía del alumno</p>
             </div>
 
             <div className="relative group">

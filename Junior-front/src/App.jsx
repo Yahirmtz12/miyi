@@ -4,6 +4,7 @@ import DashboardLayout from "./layout/DashboardLayout";
 import Inventory from "./pages/Inventory";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import Sales from "./pages/Sales";
+import { CartProvider } from "./context/CartContext";
 import Reports from "./pages/Reports";
 import UserManagement from "./pages/UserManagement";
 import History from "./pages/History";
@@ -88,7 +89,7 @@ export default function App() {
           {/* VENTAS Y GASTOS: Admin y Cajero */}
           <Route 
             path="sales" 
-            element={isAdmin || isCajero ? <Sales /> : <Navigate to={getHomePath()} replace />} 
+            element={isAdmin || isCajero ? <CartProvider><Sales /></CartProvider> : <Navigate to={getHomePath()} replace />} 
           />
           <Route 
             path="expenses" 

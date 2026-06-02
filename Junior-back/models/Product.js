@@ -5,9 +5,22 @@ const productSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  categoria: {
+  // Referencia a la colección de categorías (Café, Té, Infusión, etc.)
+  categoryId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Category',
+    default: null
+  },
+  // Tipo de producto: para la lógica de filtrado Inventario vs Punto de Venta
+  tipo: {
     type: String,
-    required: true // pollo, refresco
+    enum: ['Venta', 'Ingrediente'],
+    default: 'Venta'
+  },
+  // BACKWARD COMPATIBILITY: se mantiene 'categoria' para no romper datos existentes
+  // Los productos viejos seguirán teniendo este campo hasta que se migren
+  categoria: {
+    type: String
   },
   precio: {
     type: Number,

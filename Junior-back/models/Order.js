@@ -18,7 +18,16 @@ const orderSchema = new mongoose.Schema({
       cantidad: Number,
       precio: Number,
       notas: { type: String, default: "" },
-      entregado: { type: Boolean, default: false } 
+      entregado: { type: Boolean, default: false },
+      // Extras seleccionados para este producto
+      extras: [
+        {
+          extraId: { type: mongoose.Schema.Types.ObjectId, ref: 'Extra' },
+          nombre: String,
+          precio: Number
+        }
+      ],
+      subtotal: Number
     }
   ],
   total: {

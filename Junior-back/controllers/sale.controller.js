@@ -1,5 +1,6 @@
 const Sale = require('../models/Sale');
 const Product = require('../models/Product');
+const Extra = require('../models/Extra');
 
 // CREAR VENTA
 exports.createSale = async (req, res) => {
@@ -8,8 +9,9 @@ exports.createSale = async (req, res) => {
     const { productos, efectivoRecibido, descuento = 0 } = req.body;
 
     let subtotal = 0;
+    const productosValidados = [];
 
-    // Validar stock y calcular el subtotal (precio normal)
+    // Validar stock, extras y calcular el subtotal DESDE LA BD (nunca confiar en el front)
     for (let item of productos) {
       const product = await Product.findById(item.productoId);
 
@@ -19,10 +21,45 @@ exports.createSale = async (req, res) => {
         });
       }
 
-      subtotal += item.precio * item.cantidad;
+      // Precio base del producto (desde la BD, no del front)
+      let precioBaseReal = product.precio;
+      let extrasValidados = [];
+      let sumaExtras = 0;
+
+      // Validar extras si existen
+      if (item.extras && item.extras.length > 0) {
+        for (let extraItem of item.extras) {
+          const extraDB = await Extra.findById(extraItem.extraId);
+          if (!extraDB || !extraDB.activo) {
+            return res.status(400).json({
+              msg: `Extra no válido: ${extraItem.nombre || 'desconocido'}`
+            });
+          }
+          // Usamos el precio de la BD, no el que mandó el front
+          extrasValidados.push({
+            extraId: extraDB._id,
+            nombre: extraDB.nombre,
+            precio: extraDB.precio
+          });
+          sumaExtras += extraDB.precio;
+        }
+      }
+
+      // Subtotal de este item: (precioBase + sumaExtras) * cantidad
+      const subtotalItem = (precioBaseReal + sumaExtras) * item.cantidad;
+      subtotal += subtotalItem;
+
+      productosValidados.push({
+        productoId: item.productoId,
+        nombre: product.nombre,
+        cantidad: item.cantidad,
+        precio: precioBaseReal,
+        extras: extrasValidados,
+        subtotal: subtotalItem
+      });
     }
 
-    // 2. APLICAMOS EL DESCUENTO SOLO PARA LA VALIDACIÓN
+    // 2. APLICAMOS EL DESCUENTO
     const totalConDescuento = subtotal - ((subtotal * descuento) / 100);
 
     // 3. Validamos el efectivo contra el total real a pagar
@@ -31,7 +68,7 @@ exports.createSale = async (req, res) => {
     }
 
     // Descontar stock
-    for (let item of productos) {
+    for (let item of productosValidados) {
       await Product.findByIdAndUpdate(
         item.productoId,
         { $inc: { stock: -item.cantidad } }
@@ -41,12 +78,12 @@ exports.createSale = async (req, res) => {
     // Calculamos el cambio real
     const cambio = efectivoRecibido - totalConDescuento;
 
-    // 4. Guardamos la venta (NO agregamos el campo descuento para no alterar tu esquema)
+    // 4. Guardamos la venta con los extras validados
     const sale = new Sale({
-      productos,
-      total: totalConDescuento, // Se guarda el total ya con la rebaja
+      productos: productosValidados,
+      total: parseFloat(totalConDescuento.toFixed(2)),
       efectivoRecibido,
-      cambio,
+      cambio: parseFloat(cambio.toFixed(2)),
       usuario: req.user.id
     });
 

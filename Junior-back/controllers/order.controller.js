@@ -16,14 +16,19 @@ exports.createOrder = async (req, res) => {
         // 1. Procesamos los productos que vienen del body
         // No importa si el ID ya existe en la base de datos, 
         // se insertan como items nuevos en el array para que cocina los vea.
-        const nuevosProductosProcesados = productos.map(p => ({
-          productoId: p.productoId,
-          nombre: p.nombre,
-          cantidad: p.cantidad,
-          precio: p.precio,
-          notas: p.notas || "",
-          entregado: false // <--- Clave: Siempre false para lo nuevo
-        }));
+        const nuevosProductosProcesados = productos.map(p => {
+          const extrasSum = (p.extras || []).reduce((sum, e) => sum + (e.precio || 0), 0);
+          return {
+            productoId: p.productoId,
+            nombre: p.nombre,
+            cantidad: p.cantidad,
+            precio: p.precio,
+            notas: p.notas || "",
+            entregado: false, // <--- Clave: Siempre false para lo nuevo
+            extras: p.extras || [],
+            subtotal: (p.precio + extrasSum) * p.cantidad
+          };
+        });
 
         // 2. Insertamos al array (esto creará entradas duplicadas de ID pero con estado entregado: false)
         orderExistente.productos.push(...nuevosProductosProcesados);
@@ -43,14 +48,19 @@ exports.createOrder = async (req, res) => {
     const newOrder = new Order({
       cliente: cliente || `Mesa ${mesaId}`,
       mesaId,
-      productos: productos.map(p => ({ 
-        productoId: p.productoId,
-        nombre: p.nombre,
-        cantidad: p.cantidad,
-        precio: p.precio,
-        notas: p.notas || "", // <--- ¡AQUÍ INTEGRAS LAS NOTAS EN ÓRDENES NUEVAS!
-        entregado: false 
-      })),
+      productos: productos.map(p => {
+        const extrasSum = (p.extras || []).reduce((sum, e) => sum + (e.precio || 0), 0);
+        return {
+          productoId: p.productoId,
+          nombre: p.nombre,
+          cantidad: p.cantidad,
+          precio: p.precio,
+          notas: p.notas || "",
+          entregado: false,
+          extras: p.extras || [],
+          subtotal: (p.precio + extrasSum) * p.cantidad
+        };
+      }),
       total: Number(total),
       tipoConsumo: tipoConsumo === "COMER AQUI" ? "LOCAL" : "LLEVAR",
       estado: 'PENDIENTE'

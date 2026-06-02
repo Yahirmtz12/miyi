@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { 
   FiPackage, FiPlus, FiEdit2, FiTrash2, FiX, 
-  FiTag, FiImage, FiShoppingCart, FiTruck, FiLoader, FiDollarSign, FiLayers 
+  FiTag, FiImage, FiShoppingCart, FiTruck, FiLoader, FiDollarSign, FiLayers, FiCoffee, FiSettings 
 } from "react-icons/fi";
 import { API_URL } from "../api";
 
@@ -18,8 +18,22 @@ export default function Inventory() {
   const [stock, setStock] = useState(0);
   const [imagen, setImagen] = useState(null);
   const [preview, setPreview] = useState(null);
+  const [selectedCategoryId, setSelectedCategoryId] = useState("");
 
-  useEffect(() => { fetchProducts(); }, []);
+  // Categories & Extras state
+  const [categories, setCategories] = useState([]);
+  const [extras, setExtras] = useState([]);
+  const [showCatModal, setShowCatModal] = useState(false);
+  const [catModalType, setCatModalType] = useState("add");
+  const [currentCat, setCurrentCat] = useState(null);
+  const [catNombre, setCatNombre] = useState("");
+  const [showExtraModal, setShowExtraModal] = useState(false);
+  const [extraNombre, setExtraNombre] = useState("");
+  const [extraPrecio, setExtraPrecio] = useState("");
+  const [extraCategoryId, setExtraCategoryId] = useState("");
+  const [activeTab, setActiveTab] = useState("products"); // "products" | "categories"
+
+  useEffect(() => { fetchProducts(); fetchCategories(); fetchExtras(); }, []);
 
   const fetchProducts = async () => {
     try {
@@ -33,8 +47,64 @@ export default function Inventory() {
     }
   };
 
-  const ventaProducts = products.filter(p => p.categoria === "Venta");
-  const insumoProducts = products.filter(p => p.categoria === "Ingrediente");
+  const ventaProducts = products.filter(p => p.tipo === "Venta" || p.categoria === "Venta");
+  const insumoProducts = products.filter(p => p.tipo === "Ingrediente" || p.categoria === "Ingrediente");
+
+  const fetchCategories = async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/categories`, { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } });
+      const data = await res.json();
+      if (Array.isArray(data)) setCategories(data);
+    } catch (e) { console.error("Error fetching categories:", e); }
+  };
+
+  const fetchExtras = async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/categories/extras`, { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } });
+      const data = await res.json();
+      if (Array.isArray(data)) setExtras(data);
+    } catch (e) { console.error("Error fetching extras:", e); }
+  };
+
+  const handleSaveCategory = async () => {
+    if (!catNombre.trim()) return;
+    setIsSaving(true);
+    const method = catModalType === "add" ? "POST" : "PUT";
+    const url = catModalType === "add" ? `${API_URL}/api/categories` : `${API_URL}/api/categories/${currentCat._id}`;
+    try {
+      await fetch(url, { method, headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("token")}` }, body: JSON.stringify({ nombre: catNombre }) });
+      await fetchCategories();
+      setShowCatModal(false);
+    } catch { alert("Error al guardar categoría"); }
+    finally { setIsSaving(false); }
+  };
+
+  const handleDeleteCategory = async (cat) => {
+    if (!window.confirm(`¿Eliminar categoría "${cat.nombre}"?`)) return;
+    try {
+      await fetch(`${API_URL}/api/categories/${cat._id}`, { method: "DELETE", headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } });
+      await fetchCategories(); await fetchExtras();
+    } catch { alert("Error al eliminar"); }
+  };
+
+  const handleSaveExtra = async () => {
+    if (!extraNombre.trim() || !extraPrecio || !extraCategoryId) return;
+    setIsSaving(true);
+    try {
+      await fetch(`${API_URL}/api/categories/extras`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("token")}` }, body: JSON.stringify({ categoryId: extraCategoryId, nombre: extraNombre, precio: Number(extraPrecio) }) });
+      await fetchExtras();
+      setShowExtraModal(false); setExtraNombre(""); setExtraPrecio("");
+    } catch { alert("Error al guardar extra"); }
+    finally { setIsSaving(false); }
+  };
+
+  const handleDeleteExtra = async (extra) => {
+    if (!window.confirm(`¿Eliminar extra "${extra.nombre}"?`)) return;
+    try {
+      await fetch(`${API_URL}/api/categories/extras/${extra._id}`, { method: "DELETE", headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } });
+      await fetchExtras();
+    } catch { alert("Error al eliminar extra"); }
+  };
 
   const openModal = (type, product = null) => {
     setModalType(type);
@@ -42,12 +112,13 @@ export default function Inventory() {
     if (type === "edit" && product) {
       setNombre(product.nombre); 
       setPrecio(product.precio);
-      setCategoria(product.categoria || "Venta"); 
+      setCategoria(product.tipo || product.categoria || "Venta");
+      setSelectedCategoryId(product.categoryId?._id || product.categoryId || ""); 
       setStock(product.stock);
       setImagen(product.imagen); 
       setPreview(product.imagen);
     } else {
-      setNombre(""); setPrecio(""); setCategoria("Venta"); setStock(0); setImagen(null); setPreview(null);
+      setNombre(""); setPrecio(""); setCategoria("Venta"); setStock(0); setImagen(null); setPreview(null); setSelectedCategoryId("");
     }
     setShowModal(true);
   };
@@ -78,7 +149,7 @@ export default function Inventory() {
           "Content-Type": "application/json", 
           Authorization: `Bearer ${localStorage.getItem("token")}` 
         },
-        body: JSON.stringify({ nombre, precio, categoria, stock, imagen }),
+        body: JSON.stringify({ nombre, precio, categoria, tipo: categoria, categoryId: selectedCategoryId || null, stock, imagen }),
       });
 
       if (res.ok) {
@@ -179,17 +250,65 @@ export default function Inventory() {
       </header>
 
       <main className="p-4 md:p-8 space-y-8 max-w-6xl mx-auto">
-        <button 
-          onClick={() => openModal("add")}
-          className="w-full md:w-auto flex items-center justify-center gap-3 bg-primary text-white font-black py-5 px-10 rounded-2xl transition-all shadow-xl shadow-primary/20 active:scale-95 uppercase tracking-[0.2em] text-xs italic"
-        >
-          <FiPlus className="w-5 h-5" /> Nuevo Registro
-        </button>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 pb-20">
-          {RenderTable("Menú de Venta", ventaProducts, FiShoppingCart, "text-blue-400")}
-          {RenderTable("Insumos", insumoProducts, FiTruck, "text-purple-400")}
+        {/* Tabs */}
+        <div className="flex gap-2">
+          <button onClick={() => setActiveTab("products")} className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${activeTab === "products" ? "bg-primary border-primary text-white" : "bg-white/5 border-white/10 text-white/40 hover:bg-white/10"}`}><FiPackage className="inline mr-2" />Productos</button>
+          <button onClick={() => setActiveTab("categories")} className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${activeTab === "categories" ? "bg-primary border-primary text-white" : "bg-white/5 border-white/10 text-white/40 hover:bg-white/10"}`}><FiCoffee className="inline mr-2" />Categorías y Extras</button>
         </div>
+
+        {activeTab === "products" ? (
+          <>
+            <button onClick={() => openModal("add")} className="w-full md:w-auto flex items-center justify-center gap-3 bg-primary text-white font-black py-5 px-10 rounded-2xl transition-all shadow-xl shadow-primary/20 active:scale-95 uppercase tracking-[0.2em] text-xs italic"><FiPlus className="w-5 h-5" /> Nuevo Registro</button>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 pb-20">
+              {RenderTable("Menú de Venta", ventaProducts, FiShoppingCart, "text-blue-400")}
+              {RenderTable("Insumos", insumoProducts, FiTruck, "text-purple-400")}
+            </div>
+          </>
+        ) : (
+          <div className="space-y-8 pb-20">
+            {/* Categorías */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3"><div className="p-2 rounded-lg text-blue-400 bg-opacity-10 border border-current border-opacity-20"><FiCoffee className="w-5 h-5" /></div><h2 className="text-lg font-black text-white uppercase tracking-widest italic">Categorías</h2></div>
+                <button onClick={() => { setCatModalType("add"); setCatNombre(""); setCurrentCat(null); setShowCatModal(true); }} className="flex items-center gap-2 bg-primary text-white font-black py-3 px-6 rounded-xl text-[10px] uppercase tracking-widest active:scale-95 transition-all"><FiPlus size={14} /> Nueva</button>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {categories.map(cat => (
+                  <div key={cat._id} className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl p-4 flex items-center justify-between">
+                    <div><h3 className="text-white font-black text-sm uppercase">{cat.nombre}</h3><p className="text-white/30 text-[10px] uppercase tracking-widest mt-1">{extras.filter(e => (e.categoryId?._id || e.categoryId) === cat._id).length} extras</p></div>
+                    <div className="flex gap-2">
+                      <button onClick={() => { setCatModalType("edit"); setCatNombre(cat.nombre); setCurrentCat(cat); setShowCatModal(true); }} className="p-3 bg-white/5 text-secondary rounded-xl border border-white/10 active:scale-95"><FiEdit2 size={14} /></button>
+                      <button onClick={() => handleDeleteCategory(cat)} className="p-3 bg-white/5 text-red-500 rounded-xl border border-white/10 active:scale-95"><FiTrash2 size={14} /></button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Extras */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3"><div className="p-2 rounded-lg text-purple-400 bg-opacity-10 border border-current border-opacity-20"><FiSettings className="w-5 h-5" /></div><h2 className="text-lg font-black text-white uppercase tracking-widest italic">Extras</h2></div>
+                <button onClick={() => { setExtraNombre(""); setExtraPrecio(""); setExtraCategoryId(categories[0]?._id || ""); setShowExtraModal(true); }} className="flex items-center gap-2 bg-primary text-white font-black py-3 px-6 rounded-xl text-[10px] uppercase tracking-widest active:scale-95 transition-all"><FiPlus size={14} /> Nuevo Extra</button>
+              </div>
+              {categories.map(cat => {
+                const catExtras = extras.filter(e => (e.categoryId?._id || e.categoryId) === cat._id);
+                if (catExtras.length === 0) return null;
+                return (
+                  <div key={cat._id} className="space-y-2">
+                    <p className="text-[10px] font-black text-primary uppercase tracking-widest px-2">{cat.nombre}</p>
+                    {catExtras.map(extra => (
+                      <div key={extra._id} className="bg-black/40 border border-white/10 rounded-xl p-3 flex items-center justify-between">
+                        <div className="flex items-center gap-3"><span className="text-white font-bold text-sm uppercase">{extra.nombre}</span><span className="text-secondary font-black text-xs">+${extra.precio.toFixed(2)}</span></div>
+                        <button onClick={() => handleDeleteExtra(extra)} className="p-2 bg-white/5 text-red-500 rounded-lg border border-white/10 active:scale-95"><FiTrash2 size={12} /></button>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </main>
 
       {showModal && (
@@ -225,6 +344,20 @@ export default function Inventory() {
                       <option value="Ingrediente" className="bg-[#262626]">Ingrediente / Insumo</option>
                     </select>
                   </div>
+
+                  {/* Selector de Categoría (para extras) */}
+                  {categoria === "Venta" && (
+                    <div>
+                      <label className="text-[10px] font-black uppercase text-white/30 tracking-widest ml-2">Categoría (para extras)</label>
+                      <select value={selectedCategoryId} onChange={(e) => setSelectedCategoryId(e.target.value)} disabled={isSaving}
+                        className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 px-5 text-white focus:border-primary outline-none text-sm font-bold appearance-none cursor-pointer">
+                        <option value="" className="bg-[#262626]">Sin categoría</option>
+                        {categories.map(cat => (
+                          <option key={cat._id} value={cat._id} className="bg-[#262626]">{cat.nombre}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -270,6 +403,39 @@ export default function Inventory() {
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Categoría */}
+      {showCatModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="bg-[#262626] w-full max-w-sm rounded-3xl border border-white/10 shadow-2xl p-8 space-y-4">
+            <h3 className="text-white font-black text-lg uppercase tracking-tight">{catModalType === "add" ? "Nueva Categoría" : "Editar Categoría"}</h3>
+            <input type="text" value={catNombre} onChange={(e) => setCatNombre(e.target.value)} placeholder="Nombre de la categoría" className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 px-5 text-white focus:border-primary outline-none text-sm font-bold" />
+            <div className="flex gap-3">
+              <button onClick={handleSaveCategory} disabled={isSaving} className="flex-1 bg-primary text-white font-black py-4 rounded-2xl uppercase tracking-widest text-xs">{isSaving ? <FiLoader className="animate-spin mx-auto" /> : "Guardar"}</button>
+              <button onClick={() => setShowCatModal(false)} className="flex-1 bg-white/5 text-white/40 font-black py-4 rounded-2xl uppercase tracking-widest text-xs">Cancelar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Extra */}
+      {showExtraModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="bg-[#262626] w-full max-w-sm rounded-3xl border border-white/10 shadow-2xl p-8 space-y-4">
+            <h3 className="text-white font-black text-lg uppercase tracking-tight">Nuevo Extra</h3>
+            <select value={extraCategoryId} onChange={(e) => setExtraCategoryId(e.target.value)} className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 px-5 text-white focus:border-primary outline-none text-sm font-bold appearance-none cursor-pointer">
+              <option value="" className="bg-[#262626]">Seleccionar categoría</option>
+              {categories.map(cat => (<option key={cat._id} value={cat._id} className="bg-[#262626]">{cat.nombre}</option>))}
+            </select>
+            <input type="text" value={extraNombre} onChange={(e) => setExtraNombre(e.target.value)} placeholder="Nombre del extra" className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 px-5 text-white focus:border-primary outline-none text-sm font-bold" />
+            <input type="number" value={extraPrecio} onChange={(e) => setExtraPrecio(e.target.value)} placeholder="Precio" className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 px-5 text-white focus:border-primary outline-none text-sm font-bold" />
+            <div className="flex gap-3">
+              <button onClick={handleSaveExtra} disabled={isSaving || !extraCategoryId} className="flex-1 bg-primary text-white font-black py-4 rounded-2xl uppercase tracking-widest text-xs disabled:opacity-50">{isSaving ? <FiLoader className="animate-spin mx-auto" /> : "Guardar"}</button>
+              <button onClick={() => setShowExtraModal(false)} className="flex-1 bg-white/5 text-white/40 font-black py-4 rounded-2xl uppercase tracking-widest text-xs">Cancelar</button>
             </div>
           </div>
         </div>
