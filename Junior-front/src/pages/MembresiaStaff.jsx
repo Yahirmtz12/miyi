@@ -409,7 +409,7 @@ export default function MembresiaCaja() {
                   className="w-full flex items-center justify-center gap-2 bg-secondary text-black font-black py-4 rounded-2xl uppercase tracking-widest text-xs shadow-lg shadow-secondary/20 transition-all active:scale-95 hover:bg-[#D97018]"
                 >
                   <FiPrinter size={18} />
-                  Imprimir Ticket
+                  Imprimir Ticket 
                 </button>
                 <button 
                   onClick={() => setShowModal(false)} 
