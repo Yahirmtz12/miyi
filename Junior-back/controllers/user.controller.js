@@ -314,3 +314,30 @@ exports.registerAttendance = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+exports.updatePhone = async (req, res) => {
+  try {
+    const { telefono } = req.body;
+
+    if (!telefono || telefono.length < 10) {
+      return res.status(400).json({ msg: "El número telefónico debe tener al menos 10 dígitos" });
+    }
+
+    // Limpiar el teléfono: solo dígitos
+    const telefonoLimpio = telefono.replace(/\D/g, '');
+
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { telefono: telefonoLimpio },
+      { new: true }
+    ).select('-password');
+
+    if (!user) {
+      return res.status(404).json({ msg: "Usuario no encontrado" });
+    }
+
+    res.json({ msg: "Teléfono actualizado correctamente", telefono: user.telefono });
+  } catch (error) {
+    console.error("Error al actualizar teléfono:", error);
+    res.status(500).json({ msg: "Error interno del servidor" });
+  }
+};

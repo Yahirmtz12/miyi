@@ -8,6 +8,7 @@ router.post('/register', userController.register);
 
 // --- RUTAS DE PERFIL / ALUMNO ---
 router.get('/perfil', verifyToken, userController.getProfile);
+router.put('/update-phone', verifyToken, userController.updatePhone);
 // Obtener info del alumno al escanear QR (la que ya corregimos)
 router.get('/member/:membershipId', verifyToken, userController.getMemberById);
 

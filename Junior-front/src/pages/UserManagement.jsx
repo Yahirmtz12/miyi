@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import {
   FiShield, FiUserPlus, FiRefreshCw, FiX, FiUser,
   FiLock, FiEdit3, FiTrash2, FiAlertTriangle, FiEye, 
-  FiCalendar, FiActivity, FiSearch, FiFilter
+  FiCalendar, FiActivity, FiSearch, FiFilter, FiMessageCircle, FiAlertCircle
 } from "react-icons/fi";
 import { API_URL } from "../api";
 
@@ -29,6 +29,7 @@ export default function UserManagement() {
   const [statusFilter, setStatusFilter] = useState("todos");
 
   const [newPassword, setNewPassword] = useState("");
+  const [noPhoneToast, setNoPhoneToast] = useState("");
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
 
   const [formData, setFormData] = useState({
@@ -160,6 +161,20 @@ export default function UserManagement() {
     } catch (err) { console.error(err); }
   };
 
+  // --- WHATSAPP HANDLER ---
+  const handleWhatsApp = (user) => {
+    if (!user.telefono) {
+      setNoPhoneToast(`${user.nombre || user.usuario} no ha registrado su número telefónico`);
+      setTimeout(() => setNoPhoneToast(""), 4000);
+      return;
+    }
+    const mensaje = encodeURIComponent(
+      `¡Hola ${user.nombre}! 🎶 Continúa con nosotros en Rhythm. Recuerda renovar tu membresía mensual y sigue creciendo en este camino. ¡Te esperamos! 💪`
+    );
+    const telefono = `52${user.telefono}`;
+    window.open(`https://wa.me/${telefono}?text=${mensaje}`, '_blank');
+  };
+
   // --- LÓGICA DE FILTRADO ---
   const displayedUsers = users.filter((u) => {
     // Filtro por texto (nombre o usuario)
@@ -182,6 +197,16 @@ export default function UserManagement() {
 
   return (
     <div className="bg-[#1F1F1F] min-h-screen text-white font-sans">
+
+      {/* TOAST: USUARIO SIN TELÉFONO */}
+      {noPhoneToast && (
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[200] animate-in slide-in-from-top-3 duration-300">
+          <div className="bg-red-500/10 border border-red-500/20 backdrop-blur-xl text-red-400 px-6 py-4 rounded-2xl flex items-center gap-3 shadow-2xl max-w-sm">
+            <FiAlertCircle className="shrink-0 w-5 h-5" />
+            <span className="text-xs font-bold uppercase tracking-wide">{noPhoneToast}</span>
+          </div>
+        </div>
+      )}
       <header className="p-4 md:p-8 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-6 shrink-0">
         <div className="flex items-center gap-3 md:gap-4">
           <div className="p-2 md:p-3 bg-primary/20 rounded-2xl border border-primary/20 shrink-0">
@@ -345,6 +370,17 @@ export default function UserManagement() {
                             </button>
                           )}
 
+                          {/* BOTÓN WHATSAPP - Solo para clientes inactivos */}
+                          {esCliente && !tieneClases && (
+                            <button
+                              onClick={() => handleWhatsApp(u)}
+                              className="p-3 bg-[#25D366]/10 hover:bg-[#25D366] text-[#25D366] hover:text-white rounded-xl transition-all border border-[#25D366]/20 active:scale-90"
+                              title="Enviar WhatsApp de renovación"
+                            >
+                              <FiMessageCircle className="w-5 h-5" />
+                            </button>
+                          )}
+
                           <button
                             onClick={() => {
                               setUserToEditPassword(u);
@@ -429,6 +465,16 @@ export default function UserManagement() {
                         className="p-3.5 bg-white/5 text-purple-400 rounded-2xl border border-white/10 active:scale-90 transition-transform"
                       >
                         <FiEye className="w-5 h-5" />
+                      </button>
+                    )}
+
+                    {/* BOTÓN WHATSAPP MÓVIL - Solo clientes inactivos */}
+                    {esCliente && !tieneClases && (
+                      <button
+                        onClick={() => handleWhatsApp(u)}
+                        className="p-3.5 bg-[#25D366]/10 text-[#25D366] rounded-2xl border border-[#25D366]/20 active:scale-90 transition-transform"
+                      >
+                        <FiMessageCircle className="w-5 h-5" />
                       </button>
                     )}
 

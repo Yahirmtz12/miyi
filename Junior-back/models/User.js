@@ -16,6 +16,9 @@ const userSchema = new mongoose.Schema({
   // Disciplina a la que está inscrito (texto libre)
   disciplina: { type: String, default: '' },
 
+  // Número telefónico del usuario (para WhatsApp)
+  telefono: { type: String, default: '' },
+
   // Control de vigencia y saldo
   clasesDisponibles: { type: Number, default: 0 },
   fechaVencimiento: { type: Date, default: null },
