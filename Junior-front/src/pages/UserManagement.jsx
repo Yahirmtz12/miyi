@@ -370,8 +370,8 @@ export default function UserManagement() {
                             </button>
                           )}
 
-                          {/* BOTÓN WHATSAPP - Solo para clientes inactivos */}
-                          {esCliente && !tieneClases && (
+                          {/* BOTÓN WHATSAPP */}
+                          {esCliente && (
                             <button
                               onClick={() => handleWhatsApp(u)}
                               className="p-3 bg-[#25D366]/10 hover:bg-[#25D366] text-[#25D366] hover:text-white rounded-xl transition-all border border-[#25D366]/20 active:scale-90"
@@ -468,8 +468,8 @@ export default function UserManagement() {
                       </button>
                     )}
 
-                    {/* BOTÓN WHATSAPP MÓVIL - Solo clientes inactivos */}
-                    {esCliente && !tieneClases && (
+                    {/* BOTÓN WHATSAPP MÓVIL */}
+                    {esCliente && (
                       <button
                         onClick={() => handleWhatsApp(u)}
                         className="p-3.5 bg-[#25D366]/10 text-[#25D366] rounded-2xl border border-[#25D366]/20 active:scale-90 transition-transform"
