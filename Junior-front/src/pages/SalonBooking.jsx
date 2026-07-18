@@ -6,10 +6,44 @@ import {
 } from "react-icons/fi";
 import { API_URL } from "../api";
 
-const DIAS_SEMANA = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-const HORAS = [];
+const DIAS_SEMANA = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+const DIAS_CORTO = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+
+// Generar franjas horarias de 7 AM a 10 PM
+const FRANJAS = [];
+for (let h = 7; h <= 21; h++) {
+  FRANJAS.push({
+    inicio: `${h.toString().padStart(2, '0')}:00`,
+    fin: `${(h + 1).toString().padStart(2, '0')}:00`,
+    label: `${h > 12 ? h - 12 : h}–${h + 1 > 12 ? h + 1 - 12 : h + 1} ${h >= 12 ? 'PM' : 'AM'}`,
+  });
+}
+
+const HORAS_SELECT = [];
 for (let h = 7; h <= 22; h++) {
-  HORAS.push(`${h.toString().padStart(2, '0')}:00`);
+  HORAS_SELECT.push(`${h.toString().padStart(2, '0')}:00`);
+}
+
+// Colores aleatorios para bloques de notas diferentes
+const SLOT_COLORS = [
+  { bg: 'rgba(99,102,241,0.25)', border: 'rgba(99,102,241,0.4)', text: '#a5b4fc' },   // indigo
+  { bg: 'rgba(236,72,153,0.25)', border: 'rgba(236,72,153,0.4)', text: '#f9a8d4' },   // pink
+  { bg: 'rgba(34,211,238,0.25)', border: 'rgba(34,211,238,0.4)', text: '#67e8f9' },    // cyan
+  { bg: 'rgba(251,146,60,0.25)', border: 'rgba(251,146,60,0.4)', text: '#fdba74' },    // orange
+  { bg: 'rgba(163,230,53,0.25)', border: 'rgba(163,230,53,0.4)', text: '#bef264' },    // lime
+  { bg: 'rgba(232,121,249,0.25)', border: 'rgba(232,121,249,0.4)', text: '#e879f9' },  // fuchsia
+  { bg: 'rgba(250,204,21,0.25)', border: 'rgba(250,204,21,0.4)', text: '#fde047' },    // yellow
+  { bg: 'rgba(45,212,191,0.25)', border: 'rgba(45,212,191,0.4)', text: '#5eead4' },    // teal
+  { bg: 'rgba(248,113,113,0.25)', border: 'rgba(248,113,113,0.4)', text: '#fca5a5' },  // red
+  { bg: 'rgba(96,165,250,0.25)', border: 'rgba(96,165,250,0.4)', text: '#93c5fd' },    // blue
+];
+
+function hashString(str) {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return Math.abs(hash);
 }
 
 export default function SalonBooking() {
@@ -17,6 +51,7 @@ export default function SalonBooking() {
   const [slots, setSlots] = useState([]);
   const [loading, setLoading] = useState(true);
   const [weekOffset, setWeekOffset] = useState(0);
+  const [activeSalonIndex, setActiveSalonIndex] = useState(0);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showSalonModal, setShowSalonModal] = useState(false);
   const [editingSalon, setEditingSalon] = useState(null);
@@ -37,12 +72,14 @@ export default function SalonBooking() {
   const token = localStorage.getItem("token");
   const headers = { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
 
-  // Obtener la semana actual basada en el offset
+  // Obtener la semana (empezando en Lunes)
   const getWeekDates = () => {
     const today = new Date();
+    const dayOfWeek = today.getDay();
+    const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // Lunes como primer día
     const startOfWeek = new Date(today);
-    startOfWeek.setDate(today.getDate() - today.getDay() + (weekOffset * 7));
-    
+    startOfWeek.setDate(today.getDate() + mondayOffset + (weekOffset * 7));
+
     const dates = [];
     for (let i = 0; i < 7; i++) {
       const d = new Date(startOfWeek);
@@ -62,14 +99,8 @@ export default function SalonBooking() {
     setTimeout(() => setToast(''), 3500);
   };
 
-  // Fetch data
-  useEffect(() => {
-    fetchSalones();
-  }, []);
-
-  useEffect(() => {
-    fetchSlots();
-  }, [weekOffset]);
+  useEffect(() => { fetchSalones(); }, []);
+  useEffect(() => { fetchSlots(); }, [weekOffset]);
 
   const fetchSalones = async () => {
     try {
@@ -79,7 +110,7 @@ export default function SalonBooking() {
       if (data.length > 0 && !newSlot.salon) {
         setNewSlot(prev => ({ ...prev, salon: data[0]._id }));
       }
-    } catch (err) { console.error('Error al cargar salones'); }
+    } catch (err) { console.error('Error al cargar salones', err); }
   };
 
   const fetchSlots = async () => {
@@ -88,24 +119,31 @@ export default function SalonBooking() {
       const res = await fetch(`${API_URL}/api/salones/slots?desde=${desde}&hasta=${hasta}`);
       const data = await res.json();
       setSlots(data);
-    } catch (err) { console.error('Error al cargar slots'); }
+    } catch (err) { console.error('Error al cargar slots', err); }
     finally { setLoading(false); }
   };
 
   // CRUD Salones
   const handleSaveSalon = async () => {
+    if (!salonForm.nombre.trim()) return;
     try {
       const method = editingSalon ? 'PUT' : 'POST';
       const url = editingSalon ? `${API_URL}/api/salones/${editingSalon._id}` : `${API_URL}/api/salones`;
       const res = await fetch(url, { method, headers, body: JSON.stringify(salonForm) });
+      const data = await res.json();
       if (res.ok) {
         fetchSalones();
         setShowSalonModal(false);
         setEditingSalon(null);
         setSalonForm({ nombre: '', descripcion: '', color: '#C5A473' });
         showToast(editingSalon ? 'Salón actualizado' : 'Salón creado');
+      } else {
+        showToast(data.msg || 'Error al guardar salón', 'error');
       }
-    } catch (err) { showToast('Error al guardar salón', 'error'); }
+    } catch (err) {
+      console.error('Error al guardar salón:', err);
+      showToast('Error de conexión al guardar salón', 'error');
+    }
   };
 
   const handleDeleteSalon = async (id) => {
@@ -165,22 +203,38 @@ export default function SalonBooking() {
   };
 
   // Helpers
-  const getSlotsForDayAndSalon = (date, salonId) => {
+  const activeSalon = salones[activeSalonIndex] || null;
+
+  const getSlotForCell = (date, franja) => {
+    if (!activeSalon) return null;
     const dateStr = date.toISOString().split('T')[0];
-    return slots.filter(s => {
+    return slots.find(s => {
       const slotDate = new Date(s.fecha).toISOString().split('T')[0];
       const slotSalonId = typeof s.salon === 'object' ? s.salon._id : s.salon;
-      return slotDate === dateStr && slotSalonId === salonId;
+      if (slotDate !== dateStr || slotSalonId !== activeSalon._id) return false;
+      // El slot cubre esta franja si horaInicio <= franja.inicio y horaFin > franja.inicio
+      return s.horaInicio <= franja.inicio && s.horaFin > franja.inicio;
     });
   };
 
-  const getEstadoStyle = (estado) => {
-    switch(estado) {
-      case 'disponible': return 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400';
-      case 'reservado': return 'bg-amber-500/15 border-amber-500/30 text-amber-400';
-      case 'confirmado': return 'bg-blue-500/15 border-blue-500/30 text-blue-400';
-      default: return 'bg-white/5 border-white/10 text-white/40';
-    }
+  const getSlotSpan = (slot, franjaIndex) => {
+    // Calcular cuántas franjas ocupa este slot
+    const startHour = parseInt(slot.horaInicio.split(':')[0]);
+    const endHour = parseInt(slot.horaFin.split(':')[0]);
+    return endHour - startHour;
+  };
+
+  const isSlotStart = (date, franja, slot) => {
+    return slot && slot.horaInicio === franja.inicio;
+  };
+
+  const getSlotColor = (slot) => {
+    if (slot.estado === 'reservado') return { bg: 'rgba(251,191,36,0.2)', border: 'rgba(251,191,36,0.4)', text: '#fbbf24' };
+    if (slot.estado === 'confirmado') return { bg: 'rgba(59,130,246,0.2)', border: 'rgba(59,130,246,0.4)', text: '#60a5fa' };
+    // Para disponibles, usar color basado en las notas
+    const key = slot.notas || slot._id || '';
+    const idx = hashString(key) % SLOT_COLORS.length;
+    return SLOT_COLORS[idx];
   };
 
   const getEstadoLabel = (estado) => {
@@ -192,17 +246,14 @@ export default function SalonBooking() {
     }
   };
 
-  const isToday = (date) => {
-    const today = new Date();
-    return date.toDateString() === today.toDateString();
-  };
+  const isToday = (date) => date.toDateString() === new Date().toDateString();
 
   // Contar pendientes
   const pendientes = slots.filter(s => s.estado === 'reservado');
 
   return (
     <div className="bg-[#1F1F1F] min-h-screen text-white font-sans">
-      
+
       {/* TOAST */}
       {toast && (
         <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[200] animate-in slide-in-from-top-3 duration-300">
@@ -233,10 +284,13 @@ export default function SalonBooking() {
             }}
             className="flex items-center gap-2 bg-white/5 hover:bg-white/10 text-white font-black py-3 px-5 rounded-2xl transition-all border border-white/10 uppercase text-[10px] tracking-widest"
           >
-            <FiSettings className="w-4 h-4" /> Salones
+            <FiSettings className="w-4 h-4" /> Config
           </button>
           <button
-            onClick={() => setShowCreateModal(true)}
+            onClick={() => {
+              if (activeSalon) setNewSlot(prev => ({ ...prev, salon: activeSalon._id }));
+              setShowCreateModal(true);
+            }}
             className="flex items-center gap-2 bg-primary hover:bg-[#00205B] text-white font-black py-3 px-5 rounded-2xl transition-all shadow-xl shadow-primary/20 active:scale-95 uppercase text-[10px] tracking-widest"
           >
             <FiPlus className="w-4 h-4" /> Nuevo Horario
@@ -244,82 +298,107 @@ export default function SalonBooking() {
         </div>
       </header>
 
-      <main className="p-4 md:p-8 space-y-6 max-w-[95rem] mx-auto">
+      <main className="p-4 md:p-8 space-y-5 max-w-[95rem] mx-auto">
 
-        {/* INDICADORES */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-black/40 border border-white/5 p-4 rounded-3xl flex flex-col items-center">
-            <span className="text-2xl font-black text-white">{salones.length}</span>
-            <span className="text-[8px] font-black uppercase text-white/30 tracking-widest">Salones</span>
-          </div>
-          <div className="bg-emerald-500/5 border border-emerald-500/10 p-4 rounded-3xl flex flex-col items-center">
-            <span className="text-2xl font-black text-emerald-400">{slots.filter(s => s.estado === 'disponible').length}</span>
-            <span className="text-[8px] font-black uppercase text-emerald-400/50 tracking-widest">Disponibles</span>
-          </div>
-          <div className="bg-amber-500/5 border border-amber-500/10 p-4 rounded-3xl flex flex-col items-center relative">
-            <span className="text-2xl font-black text-amber-400">{pendientes.length}</span>
-            <span className="text-[8px] font-black uppercase text-amber-400/50 tracking-widest">Pendientes</span>
-            {pendientes.length > 0 && (
-              <div className="absolute -top-1 -right-1 w-3 h-3 bg-amber-500 rounded-full animate-pulse" />
-            )}
-          </div>
-          <div className="bg-blue-500/5 border border-blue-500/10 p-4 rounded-3xl flex flex-col items-center">
-            <span className="text-2xl font-black text-blue-400">{slots.filter(s => s.estado === 'confirmado').length}</span>
-            <span className="text-[8px] font-black uppercase text-blue-400/50 tracking-widest">Confirmados</span>
-          </div>
+        {/* TABS DE SALONES */}
+        <div className="flex gap-3 overflow-x-auto pb-1 no-scrollbar">
+          {salones.map((salon, i) => (
+            <button
+              key={salon._id}
+              onClick={() => setActiveSalonIndex(i)}
+              className={`shrink-0 flex items-center gap-3 px-6 py-4 rounded-2xl font-black uppercase text-xs tracking-widest transition-all border ${
+                activeSalonIndex === i
+                  ? 'text-white shadow-lg'
+                  : 'bg-white/[0.02] border-white/5 text-white/30 hover:text-white/60 hover:bg-white/5'
+              }`}
+              style={activeSalonIndex === i ? {
+                backgroundColor: salon.color + '20',
+                borderColor: salon.color + '40',
+                boxShadow: `0 8px 30px ${salon.color}15`,
+              } : {}}
+            >
+              <div className="w-4 h-4 rounded-full shadow-md" style={{ backgroundColor: salon.color }} />
+              <span className="text-sm md:text-base">{salon.nombre}</span>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setEditingSalon(salon);
+                  setSalonForm({ nombre: salon.nombre, descripcion: salon.descripcion || '', color: salon.color });
+                  setShowSalonModal(true);
+                }}
+                className="p-1 text-white/20 hover:text-white/60 transition-all ml-1"
+              >
+                <FiEdit3 className="w-3 h-3" />
+              </button>
+            </button>
+          ))}
         </div>
 
-        {/* NAVEGADOR DE SEMANA */}
-        <div className="flex items-center justify-between bg-black/30 border border-white/5 rounded-3xl p-4">
-          <button onClick={() => setWeekOffset(prev => prev - 1)} className="p-3 bg-white/5 hover:bg-white/10 rounded-2xl transition-all active:scale-90">
-            <FiChevronLeft className="w-5 h-5" />
-          </button>
-          <div className="text-center">
-            <h2 className="text-sm md:text-lg font-black uppercase tracking-wider">
-              {weekDates[0].toLocaleDateString('es-MX', { month: 'long', year: 'numeric' })}
-            </h2>
-            <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest">
-              {weekDates[0].toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })} — {weekDates[6].toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}
-            </p>
-          </div>
-          <div className="flex gap-2">
-            {weekOffset !== 0 && (
-              <button onClick={() => setWeekOffset(0)} className="px-4 py-3 bg-primary/10 hover:bg-primary/20 text-primary rounded-2xl transition-all text-[10px] font-black uppercase tracking-widest border border-primary/20">
-                Hoy
-              </button>
-            )}
-            <button onClick={() => setWeekOffset(prev => prev + 1)} className="p-3 bg-white/5 hover:bg-white/10 rounded-2xl transition-all active:scale-90">
-              <FiChevronRight className="w-5 h-5" />
+        {/* NAVEGADOR DE SEMANA + INDICADORES */}
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex-1 flex items-center justify-between bg-black/30 border border-white/5 rounded-2xl p-3">
+            <button onClick={() => setWeekOffset(prev => prev - 1)} className="p-2.5 bg-white/5 hover:bg-white/10 rounded-xl transition-all active:scale-90">
+              <FiChevronLeft className="w-5 h-5" />
             </button>
+            <div className="text-center">
+              <h2 className="text-sm font-black uppercase tracking-wider">
+                {weekDates[0].toLocaleDateString('es-MX', { month: 'long', year: 'numeric' })}
+              </h2>
+              <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest">
+                {weekDates[0].toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })} — {weekDates[6].toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}
+              </p>
+            </div>
+            <div className="flex gap-2">
+              {weekOffset !== 0 && (
+                <button onClick={() => setWeekOffset(0)} className="px-3 py-2.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-xl transition-all text-[10px] font-black uppercase tracking-widest border border-primary/20">
+                  Hoy
+                </button>
+              )}
+              <button onClick={() => setWeekOffset(prev => prev + 1)} className="p-2.5 bg-white/5 hover:bg-white/10 rounded-xl transition-all active:scale-90">
+                <FiChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Mini indicadores */}
+          <div className="flex gap-3">
+            <div className="bg-emerald-500/5 border border-emerald-500/10 px-4 py-2 rounded-2xl flex items-center gap-2">
+              <span className="text-lg font-black text-emerald-400">{slots.filter(s => s.estado === 'disponible').length}</span>
+              <span className="text-[8px] font-black uppercase text-emerald-400/50 tracking-widest">Disp.</span>
+            </div>
+            <div className="bg-amber-500/5 border border-amber-500/10 px-4 py-2 rounded-2xl flex items-center gap-2 relative">
+              <span className="text-lg font-black text-amber-400">{pendientes.length}</span>
+              <span className="text-[8px] font-black uppercase text-amber-400/50 tracking-widest">Pend.</span>
+              {pendientes.length > 0 && <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-500 rounded-full animate-pulse" />}
+            </div>
+            <div className="bg-blue-500/5 border border-blue-500/10 px-4 py-2 rounded-2xl flex items-center gap-2">
+              <span className="text-lg font-black text-blue-400">{slots.filter(s => s.estado === 'confirmado').length}</span>
+              <span className="text-[8px] font-black uppercase text-blue-400/50 tracking-widest">Conf.</span>
+            </div>
           </div>
         </div>
 
         {/* RESERVACIONES PENDIENTES */}
         {pendientes.length > 0 && (
-          <div className="bg-amber-500/5 border border-amber-500/10 rounded-3xl p-6 space-y-4">
-            <h3 className="text-xs font-black uppercase tracking-widest text-amber-400 flex items-center gap-2">
-              <FiAlertCircle /> Reservaciones Pendientes ({pendientes.length})
+          <div className="bg-amber-500/5 border border-amber-500/10 rounded-2xl p-4 space-y-3">
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-amber-400 flex items-center gap-2">
+              <FiAlertCircle size={14} /> Pendientes ({pendientes.length})
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="flex gap-3 overflow-x-auto pb-1 no-scrollbar">
               {pendientes.map(slot => (
-                <div key={slot._id} className="bg-black/40 border border-amber-500/20 rounded-2xl p-4 flex items-center justify-between">
+                <div key={slot._id} className="shrink-0 bg-black/40 border border-amber-500/20 rounded-2xl p-3 flex items-center gap-3 min-w-[250px]">
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-white truncate">{slot.nombreReserva || slot.reservadoPor?.nombre || 'Sin nombre'}</p>
-                    <p className="text-[10px] text-white/40 font-bold">
-                      {slot.salon?.nombre} • {new Date(slot.fecha).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })} • {slot.horaInicio} - {slot.horaFin}
+                    <p className="text-xs font-bold text-white truncate">{slot.nombreReserva || slot.reservadoPor?.nombre || 'Sin nombre'}</p>
+                    <p className="text-[9px] text-white/40 font-bold">
+                      {slot.salon?.nombre} • {new Date(slot.fecha).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })} • {slot.horaInicio}-{slot.horaFin}
                     </p>
-                    {slot.telefonoReserva && (
-                      <p className="text-[10px] text-white/30 flex items-center gap-1 mt-1">
-                        <FiPhone className="w-3 h-3" /> {slot.telefonoReserva}
-                      </p>
-                    )}
                   </div>
-                  <div className="flex gap-2 shrink-0 ml-3">
-                    <button onClick={() => handleConfirmSlot(slot._id)} className="p-2.5 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-400 hover:text-white rounded-xl transition-all active:scale-90 border border-emerald-500/20" title="Confirmar">
-                      <FiCheck className="w-4 h-4" />
+                  <div className="flex gap-1.5 shrink-0">
+                    <button onClick={() => handleConfirmSlot(slot._id)} className="p-2 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-400 hover:text-white rounded-lg transition-all active:scale-90" title="Confirmar">
+                      <FiCheck className="w-3.5 h-3.5" />
                     </button>
-                    <button onClick={() => handleRejectSlot(slot._id)} className="p-2.5 bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white rounded-xl transition-all active:scale-90 border border-red-500/20" title="Rechazar">
-                      <FiX className="w-4 h-4" />
+                    <button onClick={() => handleRejectSlot(slot._id)} className="p-2 bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white rounded-lg transition-all active:scale-90" title="Rechazar">
+                      <FiX className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>
@@ -328,103 +407,142 @@ export default function SalonBooking() {
           </div>
         )}
 
-        {/* CALENDARIO SEMANAL */}
+        {/* GRILLA HORARIA — ESTILO TABLA */}
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <FiLoader className="animate-spin text-primary w-8 h-8" />
           </div>
-        ) : (
-          <div className="overflow-x-auto pb-4">
-            <div className="min-w-[800px]">
-              {/* Header de días */}
-              <div className="grid gap-2" style={{ gridTemplateColumns: `80px repeat(${salones.length > 0 ? weekDates.length : 7}, 1fr)` }}>
-                <div /> {/* Spacer */}
-                {weekDates.map((date, i) => (
-                  <div key={i} className={`text-center py-3 rounded-2xl ${isToday(date) ? 'bg-primary/10 border border-primary/20' : 'bg-black/20 border border-white/5'}`}>
-                    <p className={`text-[10px] font-black uppercase tracking-widest ${isToday(date) ? 'text-primary' : 'text-white/30'}`}>
-                      {DIAS_SEMANA[date.getDay()]}
-                    </p>
-                    <p className={`text-lg font-black ${isToday(date) ? 'text-primary' : 'text-white'}`}>
-                      {date.getDate()}
-                    </p>
-                  </div>
-                ))}
-              </div>
-
-              {/* Filas por salón */}
-              {salones.map(salon => (
-                <div key={salon._id} className="mt-4">
-                  <div className="flex items-center gap-3 mb-2 px-2">
-                    <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: salon.color }} />
-                    <span className="text-xs font-black uppercase tracking-widest text-white/60">{salon.nombre}</span>
-                    <button
-                      onClick={() => {
-                        setEditingSalon(salon);
-                        setSalonForm({ nombre: salon.nombre, descripcion: salon.descripcion || '', color: salon.color });
-                        setShowSalonModal(true);
-                      }}
-                      className="p-1 text-white/20 hover:text-white/60 transition-all"
-                    >
-                      <FiEdit3 className="w-3 h-3" />
-                    </button>
-                  </div>
-                  <div className="grid gap-2" style={{ gridTemplateColumns: `80px repeat(${weekDates.length}, 1fr)` }}>
-                    <div className="flex flex-col justify-center items-center py-2">
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: salon.color + '20', border: `1px solid ${salon.color}30` }}>
-                        <FiClock className="w-4 h-4" style={{ color: salon.color }} />
-                      </div>
-                    </div>
-                    {weekDates.map((date, di) => {
-                      const daySlots = getSlotsForDayAndSalon(date, salon._id);
-                      return (
-                        <div key={di} className={`min-h-[80px] rounded-2xl p-2 space-y-1.5 ${isToday(date) ? 'bg-primary/[0.03] border border-primary/10' : 'bg-black/20 border border-white/5'}`}>
-                          {daySlots.length === 0 && (
-                            <div className="h-full flex items-center justify-center">
-                              <button
-                                onClick={() => {
-                                  setNewSlot({
-                                    salon: salon._id,
-                                    fecha: date.toISOString().split('T')[0],
-                                    horaInicio: '09:00',
-                                    horaFin: '10:00',
-                                    notas: '',
-                                  });
-                                  setShowCreateModal(true);
-                                }}
-                                className="p-2 text-white/10 hover:text-white/30 hover:bg-white/5 rounded-xl transition-all"
-                              >
-                                <FiPlus className="w-4 h-4" />
-                              </button>
-                            </div>
-                          )}
-                          {daySlots.map(slot => (
-                            <button
-                              key={slot._id}
-                              onClick={() => setSelectedSlot(slot)}
-                              className={`w-full text-left p-2 rounded-xl border transition-all hover:scale-[1.02] active:scale-95 ${getEstadoStyle(slot.estado)}`}
-                            >
-                              <p className="text-[10px] font-black">{slot.horaInicio} - {slot.horaFin}</p>
-                              <p className="text-[8px] uppercase tracking-wider opacity-70">{getEstadoLabel(slot.estado)}</p>
-                              {slot.nombreReserva && (
-                                <p className="text-[8px] opacity-50 truncate mt-0.5">{slot.nombreReserva}</p>
-                              )}
-                            </button>
-                          ))}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-
-              {salones.length === 0 && (
-                <div className="text-center py-20 text-white/20">
-                  <FiCalendar className="w-12 h-12 mx-auto mb-4 opacity-30" />
-                  <p className="text-sm font-black uppercase tracking-widest">No hay salones registrados</p>
-                  <p className="text-xs text-white/10 mt-2">Ejecuta el script de seed o crea salones manualmente</p>
-                </div>
-              )}
+        ) : activeSalon ? (
+          <div className="bg-black/20 border border-white/5 rounded-3xl overflow-hidden">
+            {/* Título del salón */}
+            <div className="p-4 border-b border-white/5 flex items-center gap-3" style={{ background: `linear-gradient(90deg, ${activeSalon.color}10, transparent)` }}>
+              <div className="w-5 h-5 rounded-full shadow-lg" style={{ backgroundColor: activeSalon.color, boxShadow: `0 0 15px ${activeSalon.color}60` }} />
+              <h2 className="text-lg md:text-2xl font-black uppercase tracking-tight">{activeSalon.nombre}</h2>
+              {activeSalon.descripcion && <span className="text-xs text-white/30 italic hidden md:inline">— {activeSalon.descripcion}</span>}
             </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[700px] border-collapse">
+                {/* Header: Días de la semana */}
+                <thead>
+                  <tr>
+                    <th className="w-20 p-2 text-[9px] font-black uppercase tracking-widest text-white/20 border-b border-r border-white/5 bg-black/30 sticky left-0 z-10">
+                      Hora
+                    </th>
+                    {weekDates.map((date, i) => (
+                      <th key={i} className={`p-3 text-center border-b border-white/5 ${isToday(date) ? 'bg-primary/[0.06]' : ''}`}>
+                        <p className={`text-[9px] font-black uppercase tracking-widest ${isToday(date) ? 'text-primary' : 'text-white/25'}`}>
+                          {DIAS_CORTO[i]}
+                        </p>
+                        <p className={`text-base font-black ${isToday(date) ? 'text-primary' : 'text-white/70'}`}>
+                          {date.getDate()}
+                        </p>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+
+                {/* Body: Franjas horarias */}
+                <tbody>
+                  {FRANJAS.map((franja, fi) => (
+                    <tr key={fi} className="group">
+                      {/* Hora */}
+                      <td className="p-1.5 text-[9px] font-black text-white/20 uppercase tracking-wider border-r border-white/5 bg-black/30 sticky left-0 z-10 text-center whitespace-nowrap">
+                        {franja.label}
+                      </td>
+
+                      {/* Celdas por día */}
+                      {weekDates.map((date, di) => {
+                        const slot = getSlotForCell(date, franja);
+                        const isStart = slot && isSlotStart(date, franja, slot);
+                        const span = slot ? getSlotSpan(slot, fi) : 1;
+                        const color = slot ? getSlotColor(slot) : null;
+
+                        // Si el slot no empieza aquí pero existe, no renderizar celda (está cubierta por rowspan)
+                        if (slot && !isStart) return null;
+
+                        if (slot && isStart) {
+                          return (
+                            <td
+                              key={di}
+                              rowSpan={span}
+                              className={`p-1 border border-white/[0.03] relative ${isToday(date) ? 'bg-primary/[0.02]' : ''}`}
+                            >
+                              <button
+                                onClick={() => setSelectedSlot(slot)}
+                                className="w-full h-full rounded-xl p-2 text-left transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer flex flex-col justify-center min-h-[40px]"
+                                style={{
+                                  backgroundColor: color.bg,
+                                  border: `1px solid ${color.border}`,
+                                }}
+                              >
+                                <p className="text-[10px] font-black leading-tight truncate" style={{ color: color.text }}>
+                                  {slot.notas || getEstadoLabel(slot.estado)}
+                                </p>
+                                {slot.nombreReserva && (
+                                  <p className="text-[8px] opacity-60 truncate mt-0.5" style={{ color: color.text }}>
+                                    {slot.nombreReserva}
+                                  </p>
+                                )}
+                                <p className="text-[7px] opacity-40 mt-0.5" style={{ color: color.text }}>
+                                  {slot.horaInicio}–{slot.horaFin}
+                                </p>
+                              </button>
+                            </td>
+                          );
+                        }
+
+                        // Celda vacía
+                        return (
+                          <td
+                            key={di}
+                            className={`p-1 border border-white/[0.03] ${isToday(date) ? 'bg-primary/[0.02]' : ''}`}
+                          >
+                            <button
+                              onClick={() => {
+                                setNewSlot({
+                                  salon: activeSalon._id,
+                                  fecha: date.toISOString().split('T')[0],
+                                  horaInicio: franja.inicio,
+                                  horaFin: franja.fin,
+                                  notas: '',
+                                });
+                                setShowCreateModal(true);
+                              }}
+                              className="w-full h-full min-h-[40px] rounded-xl transition-all opacity-0 group-hover:opacity-100 hover:!opacity-100 hover:bg-white/5 flex items-center justify-center"
+                            >
+                              <FiPlus className="w-3 h-3 text-white/15" />
+                            </button>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Leyenda */}
+            <div className="p-3 border-t border-white/5 flex flex-wrap items-center justify-center gap-4 text-[8px] font-black uppercase tracking-widest text-white/20">
+              <div className="flex items-center gap-1.5">
+                <div className="w-3 h-3 rounded bg-indigo-500/25 border border-indigo-500/40" /> Disponible
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-3 h-3 rounded bg-amber-500/25 border border-amber-500/40" /> Pendiente
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-3 h-3 rounded bg-blue-500/25 border border-blue-500/40" /> Confirmado
+              </div>
+              <div className="flex items-center gap-1.5 text-white/10">
+                Clic en celda vacía para agregar
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="text-center py-20 text-white/20">
+            <FiCalendar className="w-12 h-12 mx-auto mb-4 opacity-30" />
+            <p className="text-sm font-black uppercase tracking-widest">No hay salones registrados</p>
+            <p className="text-xs text-white/10 mt-2">Crea salones desde el botón "Config"</p>
           </div>
         )}
       </main>
@@ -475,7 +593,7 @@ export default function SalonBooking() {
                     onChange={(e) => setNewSlot({ ...newSlot, horaInicio: e.target.value })}
                     className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 px-5 text-white focus:border-primary outline-none text-sm cursor-pointer appearance-none font-bold"
                   >
-                    {HORAS.map(h => <option key={h} value={h}>{h}</option>)}
+                    {HORAS_SELECT.map(h => <option key={h} value={h}>{h}</option>)}
                   </select>
                 </div>
                 <div className="space-y-2">
@@ -485,19 +603,19 @@ export default function SalonBooking() {
                     onChange={(e) => setNewSlot({ ...newSlot, horaFin: e.target.value })}
                     className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 px-5 text-white focus:border-primary outline-none text-sm cursor-pointer appearance-none font-bold"
                   >
-                    {HORAS.filter(h => h > newSlot.horaInicio).map(h => <option key={h} value={h}>{h}</option>)}
+                    {HORAS_SELECT.filter(h => h > newSlot.horaInicio).map(h => <option key={h} value={h}>{h}</option>)}
                   </select>
                 </div>
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-white/30 uppercase ml-2 tracking-widest">Notas (Opcional)</label>
+                <label className="text-[10px] font-black text-white/30 uppercase ml-2 tracking-widest">Nombre / Clase (Opcional)</label>
                 <input
                   type="text"
                   value={newSlot.notas}
                   onChange={(e) => setNewSlot({ ...newSlot, notas: e.target.value })}
-                  placeholder="Ej: Clase de salsa avanzada..."
-                  className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 px-5 text-white focus:border-primary outline-none text-sm transition placeholder:text-white/10"
+                  placeholder="Ej: SALSA, KPOP, URBANO, XV..."
+                  className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 px-5 text-white focus:border-primary outline-none text-sm transition placeholder:text-white/10 uppercase font-bold"
                 />
               </div>
 
@@ -539,7 +657,18 @@ export default function SalonBooking() {
                 </div>
               </div>
 
-              <div className={`p-4 rounded-2xl border ${getEstadoStyle(selectedSlot.estado)} text-center`}>
+              {selectedSlot.notas && (
+                <div className="bg-black/40 border border-white/5 p-4 rounded-2xl">
+                  <p className="text-[9px] uppercase tracking-widest text-white/40 font-black">Clase / Notas</p>
+                  <p className="text-sm text-white font-bold uppercase">{selectedSlot.notas}</p>
+                </div>
+              )}
+
+              <div className={`p-3 rounded-2xl border text-center ${
+                selectedSlot.estado === 'disponible' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' :
+                selectedSlot.estado === 'reservado' ? 'bg-amber-500/10 border-amber-500/20 text-amber-400' :
+                'bg-blue-500/10 border-blue-500/20 text-blue-400'
+              }`}>
                 <p className="text-xs font-black uppercase tracking-widest">{getEstadoLabel(selectedSlot.estado)}</p>
               </div>
 
@@ -556,13 +685,6 @@ export default function SalonBooking() {
                       <span className="text-sm font-bold">{selectedSlot.telefonoReserva}</span>
                     </div>
                   )}
-                </div>
-              )}
-
-              {selectedSlot.notas && (
-                <div className="bg-black/40 border border-white/5 p-4 rounded-2xl">
-                  <p className="text-[9px] uppercase tracking-widest text-white/40 font-black">Notas</p>
-                  <p className="text-sm text-white/60">{selectedSlot.notas}</p>
                 </div>
               )}
 
@@ -589,7 +711,7 @@ export default function SalonBooking() {
         </div>
       )}
 
-      {/* MODAL: GESTIONAR SALÓN */}
+      {/* MODAL: GESTIONAR SALONES */}
       {showSalonModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
           <div className="bg-[#1F1F1F] w-full max-w-md rounded-[2.5rem] border border-white/10 shadow-2xl overflow-hidden animate-in zoom-in duration-300">
@@ -602,7 +724,6 @@ export default function SalonBooking() {
               </button>
             </div>
             <div className="p-6 space-y-5">
-              {/* Lista de salones existentes */}
               {!editingSalon && (
                 <div className="space-y-3 max-h-40 overflow-y-auto">
                   {salones.map(s => (
