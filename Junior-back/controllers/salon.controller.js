@@ -92,33 +92,59 @@ exports.getSlots = async (req, res) => {
 // POST /api/salones/slots — Crear bloque de disponibilidad (admin)
 exports.createSlot = async (req, res) => {
   try {
-    const { salon, fecha, horaInicio, horaFin, notas } = req.body;
+    const { salon, fecha, horaInicio, horaFin, notas, repetirSemanalmente, repetirHasta } = req.body;
 
-    // Verificar que no exista un slot que se superponga
-    const conflicto = await SalonSlot.findOne({
-      salon,
-      fecha: new Date(fecha),
-      $or: [
-        { horaInicio: { $lt: horaFin }, horaFin: { $gt: horaInicio } }
-      ]
-    });
-
-    if (conflicto) {
-      return res.status(400).json({ msg: 'Ya existe un horario que se cruza en ese salón para esa fecha' });
+    const startDate = new Date(fecha);
+    const endDate = (repetirSemanalmente && repetirHasta) ? new Date(repetirHasta) : new Date(fecha);
+    
+    // Validar que la fecha final no sea menor a la inicial
+    if (endDate < startDate) {
+      return res.status(400).json({ msg: 'La fecha de "Repetir hasta" no puede ser anterior a la fecha inicial' });
     }
 
-    const slot = new SalonSlot({
+    // Generar todas las fechas
+    const fechasACrear = [];
+    let currentDate = new Date(startDate);
+    while (currentDate <= endDate) {
+      fechasACrear.push(new Date(currentDate));
+      currentDate.setDate(currentDate.getDate() + 7);
+    }
+
+    // 1. Verificar conflictos para TODAS las fechas
+    const conflictos = [];
+    for (const d of fechasACrear) {
+      const conflicto = await SalonSlot.findOne({
+        salon,
+        fecha: d,
+        $or: [
+          { horaInicio: { $lt: horaFin }, horaFin: { $gt: horaInicio } }
+        ]
+      });
+      if (conflicto) {
+        conflictos.push(d.toLocaleDateString('es-MX'));
+      }
+    }
+
+    if (conflictos.length > 0) {
+      return res.status(400).json({ 
+        msg: `Hay conflictos de horario en las siguientes fechas: ${conflictos.join(', ')}. No se creó ningún horario.` 
+      });
+    }
+
+    // 2. Crear todos los slots ya que no hay conflictos
+    const slotsToInsert = fechasACrear.map(d => ({
       salon,
-      fecha: new Date(fecha),
+      fecha: d,
       horaInicio,
       horaFin,
       notas,
       estado: 'disponible',
-    });
+    }));
 
-    await slot.save();
-    const populated = await slot.populate('salon', 'nombre color');
-    res.status(201).json(populated);
+    await SalonSlot.insertMany(slotsToInsert);
+    
+    // Devolvemos el primer slot para que el frontend lo tome como éxito (el frontend recarga la semana de todos modos)
+    res.status(201).json({ msg: `${fechasACrear.length} horarios creados exitosamente.` });
   } catch (error) {
     res.status(500).json({ msg: 'Error al crear slot', error: error.message });
   }

@@ -66,6 +66,8 @@ export default function SalonBooking() {
     horaInicio: '09:00',
     horaFin: '10:00',
     notas: '',
+    repetirSemanalmente: false,
+    repetirHasta: '',
   });
   const [salonForm, setSalonForm] = useState({ nombre: '', descripcion: '', color: '#C5A473' });
 
@@ -506,6 +508,8 @@ export default function SalonBooking() {
                                   horaInicio: franja.inicio,
                                   horaFin: franja.fin,
                                   notas: '',
+                                  repetirSemanalmente: false,
+                                  repetirHasta: '',
                                 });
                                 setShowCreateModal(true);
                               }}
@@ -618,6 +622,32 @@ export default function SalonBooking() {
                   className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 px-5 text-white focus:border-primary outline-none text-sm transition placeholder:text-white/10 uppercase font-bold"
                 />
               </div>
+
+              <div className="space-y-2 pt-2">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={newSlot.repetirSemanalmente}
+                    onChange={(e) => setNewSlot({ ...newSlot, repetirSemanalmente: e.target.checked })}
+                    className="w-4 h-4 accent-primary"
+                  />
+                  <span className="text-[10px] font-black text-white/60 uppercase tracking-widest">Repetir cada semana</span>
+                </label>
+              </div>
+
+              {newSlot.repetirSemanalmente && (
+                <div className="space-y-2 animate-in slide-in-from-top-2">
+                  <label className="text-[10px] font-black text-white/30 uppercase ml-2 tracking-widest">Repetir hasta (Fecha final)</label>
+                  <input
+                    type="date"
+                    value={newSlot.repetirHasta}
+                    onChange={(e) => setNewSlot({ ...newSlot, repetirHasta: e.target.value })}
+                    min={newSlot.fecha}
+                    className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 px-5 text-white focus:border-primary outline-none font-bold [color-scheme:dark]"
+                    required={newSlot.repetirSemanalmente}
+                  />
+                </div>
+              )}
 
               <button
                 type="submit"
