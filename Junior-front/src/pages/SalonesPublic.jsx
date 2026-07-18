@@ -109,7 +109,9 @@ export default function SalonesPublic() {
     if (!activeSalon) return null;
     const dateStr = getLocalYMD(date);
     return slots.find(s => {
-      const slotDate = getLocalYMD(new Date(s.fecha));
+      // s.fecha es un ISO string de MongoDB (ej. "2026-07-19T00:00:00.000Z")
+      // Extraemos solo la parte YYYY-MM-DD para evitar desplazamientos por zona horaria
+      const slotDate = s.fecha.split('T')[0];
       const slotSalonId = typeof s.salon === 'object' ? s.salon._id : s.salon;
       if (slotDate !== dateStr || slotSalonId !== activeSalon._id) return false;
       return s.horaInicio <= franja.inicio && s.horaFin > franja.inicio;
@@ -330,7 +332,7 @@ export default function SalonesPublic() {
                                 style={{ backgroundColor: color.bg, border: `1px solid ${color.border}` }}
                               >
                                 <p className="text-[9px] font-black leading-tight truncate flex items-center gap-1" style={{ color: color.text }}>
-                                  <FiAlertCircle className="w-3 h-3 shrink-0" /> {slot.notas || 'Ocupado'}
+                                  <FiAlertCircle className="w-3 h-3 shrink-0" /> {slot.estado === 'reservado' ? 'Pendiente' : (slot.notas || 'Ocupado')}
                                 </p>
                                 <p className="text-[7px] opacity-40 mt-0.5" style={{ color: color.text }}>
                                   {slot.horaInicio}–{slot.horaFin}
@@ -378,7 +380,7 @@ export default function SalonesPublic() {
                 <div className="w-3 h-3 rounded bg-primary/20 border border-primary" /> Seleccionado
               </div>
               <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded bg-red-500/20 border border-red-500/30" /> Ocupado
+                <div className="w-3 h-3 rounded bg-red-500/20 border border-red-500/30" /> Ocupado / Pendiente
               </div>
             </div>
           </div>

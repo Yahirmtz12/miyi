@@ -219,7 +219,9 @@ export default function SalonBooking() {
     if (!activeSalon) return null;
     const dateStr = getLocalYMD(date);
     return slots.find(s => {
-      const slotDate = getLocalYMD(new Date(s.fecha));
+      // s.fecha es un ISO string de MongoDB (ej. "2026-07-19T00:00:00.000Z")
+      // Extraemos solo la parte YYYY-MM-DD para evitar desplazamientos por zona horaria
+      const slotDate = s.fecha.split('T')[0];
       const slotSalonId = typeof s.salon === 'object' ? s.salon._id : s.salon;
       if (slotDate !== dateStr || slotSalonId !== activeSalon._id) return false;
       // El slot cubre esta franja si horaInicio <= franja.inicio y horaFin > franja.inicio
