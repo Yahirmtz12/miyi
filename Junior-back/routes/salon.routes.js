@@ -15,6 +15,7 @@ router.post('/slots', verifyToken, isAdmin, salonCtrl.createSlot);           // 
 router.put('/slots/:id', verifyToken, isAdmin, salonCtrl.updateSlot);        // Admin: editar bloque
 router.delete('/slots/:id', verifyToken, isAdmin, salonCtrl.deleteSlot);     // Admin: eliminar bloque
 router.post('/slots/:id/reservar', salonCtrl.reserveSlot);                   // Público: reservar slot
+router.post('/reservar-publico', salonCtrl.publicReserveSlots);              // Público: solicitar múltiples horarios
 router.put('/slots/:id/confirmar', verifyToken, isAdmin, salonCtrl.confirmSlot);  // Admin: confirmar
 router.put('/slots/:id/rechazar', verifyToken, isAdmin, salonCtrl.rejectSlot);    // Admin: rechazar
 

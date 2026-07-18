@@ -232,8 +232,7 @@ export default function SalonBooking() {
 
   const getSlotColor = (slot) => {
     if (slot.estado === 'reservado') return { bg: 'rgba(251,191,36,0.2)', border: 'rgba(251,191,36,0.4)', text: '#fbbf24' };
-    if (slot.estado === 'confirmado') return { bg: 'rgba(59,130,246,0.2)', border: 'rgba(59,130,246,0.4)', text: '#60a5fa' };
-    // Para disponibles, usar color basado en las notas
+    // Para clases fijas (confirmado) usar color basado en las notas
     const key = slot.notas || slot._id || '';
     const idx = hashString(key) % SLOT_COLORS.length;
     return SLOT_COLORS[idx];
@@ -243,7 +242,7 @@ export default function SalonBooking() {
     switch(estado) {
       case 'disponible': return 'Disponible';
       case 'reservado': return 'Pendiente';
-      case 'confirmado': return 'Confirmado';
+      case 'confirmado': return 'Ocupado';
       default: return estado;
     }
   };
@@ -529,16 +528,13 @@ export default function SalonBooking() {
             {/* Leyenda */}
             <div className="p-3 border-t border-white/5 flex flex-wrap items-center justify-center gap-4 text-[8px] font-black uppercase tracking-widest text-white/20">
               <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded bg-indigo-500/25 border border-indigo-500/40" /> Disponible
+                <div className="w-3 h-3 rounded bg-indigo-500/25 border border-indigo-500/40" /> Clase / Ocupado
               </div>
               <div className="flex items-center gap-1.5">
                 <div className="w-3 h-3 rounded bg-amber-500/25 border border-amber-500/40" /> Pendiente
               </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded bg-blue-500/25 border border-blue-500/40" /> Confirmado
-              </div>
               <div className="flex items-center gap-1.5 text-white/10">
-                Clic en celda vacía para agregar
+                Clic en celda vacía para agregar horario ocupado
               </div>
             </div>
           </div>

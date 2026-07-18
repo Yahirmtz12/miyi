@@ -138,7 +138,7 @@ exports.createSlot = async (req, res) => {
       horaInicio,
       horaFin,
       notas,
-      estado: 'disponible',
+      estado: 'confirmado',
     }));
 
     await SalonSlot.insertMany(slotsToInsert);
@@ -243,3 +243,31 @@ exports.rejectSlot = async (req, res) => {
     res.status(500).json({ msg: 'Error al rechazar', error: error.message });
   }
 };
+
+// POST /api/salones/reservar-publico — Cliente solicita múltiples horarios
+exports.publicReserveSlots = async (req, res) => {
+  try {
+    const { slots, nombre, telefono } = req.body; // slots = [{salonId, fecha, horaInicio, horaFin}]
+    
+    if (!slots || !Array.isArray(slots) || slots.length === 0) {
+      return res.status(400).json({ msg: 'No se enviaron horarios para reservar' });
+    }
+
+    // Insertar todos con estado reservado
+    const slotsToInsert = slots.map(s => ({
+      salon: s.salonId,
+      fecha: new Date(s.fecha),
+      horaInicio: s.horaInicio,
+      horaFin: s.horaFin,
+      estado: 'reservado',
+      nombreReserva: nombre || '',
+      telefonoReserva: telefono || ''
+    }));
+
+    await SalonSlot.insertMany(slotsToInsert);
+    res.status(201).json({ msg: 'Reservaciones creadas exitosamente' });
+  } catch (error) {
+    res.status(500).json({ msg: 'Error al reservar', error: error.message });
+  }
+};
+

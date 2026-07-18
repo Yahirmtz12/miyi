@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import {
   FiCalendar, FiClock, FiChevronLeft, FiChevronRight,
-  FiLoader, FiMessageCircle, FiArrowLeft, FiMapPin, FiX, FiCheckCircle
+  FiLoader, FiMessageCircle, FiArrowLeft, FiMapPin, FiX, FiCheck, FiShoppingCart, FiAlertCircle
 } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
 import { API_URL } from "../api";
@@ -41,12 +41,15 @@ function hashString(str) {
 
 export default function SalonesPublic() {
   const [salones, setSalones] = useState([]);
-  const [slots, setSlots] = useState([]);
+  const [slots, setSlots] = useState([]); // Estos ahora representan los OCUPADOS (creados por admin o apartados)
   const [loading, setLoading] = useState(true);
   const [weekOffset, setWeekOffset] = useState(0);
   const [activeSalonIndex, setActiveSalonIndex] = useState(0);
+  
+  // Cart state
+  const [cart, setCart] = useState([]);
+  
   const [showBookingModal, setShowBookingModal] = useState(false);
-  const [selectedSlot, setSelectedSlot] = useState(null);
   const [bookingForm, setBookingForm] = useState({ nombre: '', telefono: '' });
   const [bookingSuccess, setBookingSuccess] = useState(false);
   const navigate = useNavigate();
@@ -101,7 +104,7 @@ export default function SalonesPublic() {
       const slotDate = new Date(s.fecha).toISOString().split('T')[0];
       const slotSalonId = typeof s.salon === 'object' ? s.salon._id : s.salon;
       if (slotDate !== dateStr || slotSalonId !== activeSalon._id) return false;
-      return s.horaInicio <= franja.inicio && s.horaFin > franja.inicio && s.estado === 'disponible';
+      return s.horaInicio <= franja.inicio && s.horaFin > franja.inicio;
     });
   };
 
@@ -125,41 +128,72 @@ export default function SalonesPublic() {
     return d < today;
   };
 
-  const handleSelectSlot = (slot, date) => {
-    if (isPast(date)) return;
-    setSelectedSlot(slot);
-    setBookingForm({ nombre: '', telefono: '' });
-    setBookingSuccess(false);
-    setShowBookingModal(true);
+  const toggleCartSlot = (date, franja) => {
+    const slotId = `${date.getTime()}-${franja.inicio}`;
+    const slotData = {
+      _id: slotId,
+      salonId: activeSalon._id,
+      salon: activeSalon,
+      fecha: date.toISOString(),
+      horaInicio: franja.inicio,
+      horaFin: franja.fin,
+    };
+
+    setCart(prev => {
+      const exists = prev.find(s => s._id === slotId);
+      if (exists) {
+        return prev.filter(s => s._id !== slotId);
+      } else {
+        return [...prev, slotData];
+      }
+    });
   };
 
-  const handleWhatsAppBook = () => {
-    const salon = selectedSlot?.salon?.nombre || 'Salón';
-    const fecha = new Date(selectedSlot.fecha).toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
-    const horario = `${selectedSlot.horaInicio} a ${selectedSlot.horaFin}`;
+  const isSlotInCart = (date, franja) => {
+    const slotId = `${date.getTime()}-${franja.inicio}`;
+    return cart.some(s => s._id === slotId);
+  };
 
-    let mensaje = `¡Hola! 👋 Me interesa apartar el *${salon}* el día *${fecha}* en horario de *${horario}*.`;
-    if (bookingForm.nombre) mensaje += `\n\nMi nombre es: *${bookingForm.nombre}*`;
+  const handleWhatsAppBook = async () => {
+    if (cart.length === 0) return;
+
+    let mensaje = `¡Hola! 👋 Me interesa rentar los siguientes horarios:\n\n`;
+    
+    cart.forEach((slot, index) => {
+      const salon = slot.salon?.nombre || 'Salón';
+      const fecha = new Date(slot.fecha).toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
+      mensaje += `*${index + 1}. ${salon}* - ${fecha} de *${slot.horaInicio} a ${slot.horaFin}*\n`;
+    });
+
+    if (bookingForm.nombre) mensaje += `\nMi nombre es: *${bookingForm.nombre}*`;
     if (bookingForm.telefono) mensaje += `\nMi teléfono: ${bookingForm.telefono}`;
-    mensaje += `\n\n¿Cuál sería el precio? 🙏`;
+    mensaje += `\n\n¿Cuál sería el precio total para apartar? 🙏`;
 
     window.open(`https://wa.me/52${WHATSAPP_OWNER}?text=${encodeURIComponent(mensaje)}`, '_blank');
 
     if (bookingForm.nombre) {
-      fetch(`${API_URL}/api/salones/slots/${selectedSlot._id}/reservar`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nombre: bookingForm.nombre, telefono: bookingForm.telefono }),
-      }).catch(() => {});
+      try {
+        await fetch(`${API_URL}/api/salones/reservar-publico`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            slots: cart,
+            nombre: bookingForm.nombre,
+            telefono: bookingForm.telefono
+          }),
+        });
+      } catch (err) {
+        console.error('Error al reservar', err);
+      }
     }
 
     setBookingSuccess(true);
+    setCart([]); 
   };
 
   return (
-    <div className="min-h-screen bg-[#1A1A1A] text-white font-sans">
+    <div className="min-h-screen bg-[#1A1A1A] text-white font-sans pb-32">
 
-      {/* HEADER */}
       <header className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-primary/10 via-transparent to-transparent pointer-events-none" />
         <div className="relative max-w-6xl mx-auto px-4 md:px-6 pt-6 pb-4">
@@ -176,10 +210,10 @@ export default function SalonesPublic() {
               <span className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Rhythm Oaxaca</span>
             </div>
             <h1 className="text-2xl md:text-4xl font-black uppercase tracking-tighter italic">
-              Reserva tu <span className="text-primary">Salón</span>
+              Renta tu <span className="text-primary">Salón</span>
             </h1>
             <p className="text-white/40 text-xs max-w-md mx-auto">
-              Selecciona un horario disponible y contáctanos por WhatsApp
+              Selecciona los horarios disponibles en la cuadrícula y cotiza por WhatsApp
             </p>
           </div>
         </div>
@@ -187,7 +221,6 @@ export default function SalonesPublic() {
 
       <div className="max-w-6xl mx-auto px-4 md:px-6 py-4 space-y-4">
 
-        {/* TABS DE SALONES */}
         <div className="flex gap-3 overflow-x-auto pb-1 no-scrollbar">
           {salones.map((salon, i) => (
             <button
@@ -207,7 +240,6 @@ export default function SalonesPublic() {
           ))}
         </div>
 
-        {/* NAVEGADOR DE SEMANA */}
         <div className="flex items-center justify-between bg-white/[0.03] border border-white/5 rounded-2xl p-3">
           <button onClick={() => setWeekOffset(prev => Math.max(0, prev - 1))} disabled={weekOffset === 0} className="p-2.5 bg-white/5 hover:bg-white/10 rounded-xl transition-all disabled:opacity-20">
             <FiChevronLeft className="w-5 h-5" />
@@ -232,17 +264,15 @@ export default function SalonesPublic() {
           </div>
         </div>
 
-        {/* GRILLA HORARIA */}
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <FiLoader className="animate-spin text-primary w-8 h-8" />
           </div>
         ) : activeSalon ? (
-          <div className="bg-black/20 border border-white/5 rounded-3xl overflow-hidden">
+          <div className="bg-black/20 border border-white/5 rounded-3xl overflow-hidden relative">
             <div className="p-4 border-b border-white/5 flex items-center gap-3" style={{ background: `linear-gradient(90deg, ${activeSalon.color}10, transparent)` }}>
               <div className="w-4 h-4 rounded-full" style={{ backgroundColor: activeSalon.color }} />
               <h2 className="text-base md:text-xl font-black uppercase tracking-tight">{activeSalon.nombre}</h2>
-              {activeSalon.descripcion && <span className="text-[10px] text-white/30 italic hidden md:inline">— {activeSalon.descripcion}</span>}
             </div>
 
             <div className="overflow-x-auto">
@@ -275,33 +305,52 @@ export default function SalonesPublic() {
                         const slot = getSlotForCell(date, franja);
                         const isStart = slot && isSlotStart(slot, franja);
                         const span = slot ? getSlotSpan(slot) : 1;
-                        const color = slot ? getSlotColor(slot) : null;
+                        const inCart = isSlotInCart(date, franja);
 
+                        // Si hay un slot de base de datos ocupando espacio y no es el inicio, saltarlo
                         if (slot && !isStart) return null;
 
+                        // Si HAY un slot en BD, significa que está OCUPADO
                         if (slot && isStart) {
+                          const color = getSlotColor(slot);
                           return (
                             <td key={di} rowSpan={span} className={`p-1 border border-white/[0.03] ${isToday(date) ? 'bg-primary/[0.02]' : ''} ${past ? 'opacity-30' : ''}`}>
-                              <button
-                                onClick={() => !past && handleSelectSlot(slot, date)}
-                                disabled={past}
-                                className="w-full h-full rounded-xl p-2 text-left transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer flex flex-col justify-center min-h-[36px] disabled:cursor-not-allowed"
+                              <div
+                                className="w-full h-full rounded-xl p-2 flex flex-col justify-center min-h-[36px] opacity-70 cursor-not-allowed"
                                 style={{ backgroundColor: color.bg, border: `1px solid ${color.border}` }}
                               >
-                                <p className="text-[9px] font-black leading-tight truncate" style={{ color: color.text }}>
-                                  {slot.notas || 'Disponible'}
+                                <p className="text-[9px] font-black leading-tight truncate flex items-center gap-1" style={{ color: color.text }}>
+                                  <FiAlertCircle className="w-3 h-3 shrink-0" /> {slot.notas || 'Ocupado'}
                                 </p>
                                 <p className="text-[7px] opacity-40 mt-0.5" style={{ color: color.text }}>
                                   {slot.horaInicio}–{slot.horaFin}
                                 </p>
-                              </button>
+                              </div>
                             </td>
                           );
                         }
 
+                        // Si NO hay slot en BD, significa que está LIBRE
                         return (
                           <td key={di} className={`p-1 border border-white/[0.03] ${isToday(date) ? 'bg-primary/[0.02]' : ''} ${past ? 'opacity-30' : ''}`}>
-                            <div className="min-h-[36px]" />
+                            <button
+                              onClick={() => !past && toggleCartSlot(date, franja)}
+                              disabled={past}
+                              className={`w-full h-full min-h-[36px] rounded-xl p-2 text-left transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer flex flex-col justify-center disabled:cursor-not-allowed border ${
+                                inCart 
+                                  ? 'bg-primary/20 border-primary shadow-lg ring-2 ring-primary ring-offset-2 ring-offset-[#1A1A1A] scale-[0.98]' 
+                                  : 'border-white/5 hover:border-white/20 hover:bg-white/5'
+                              }`}
+                            >
+                              {inCart ? (
+                                <div className="absolute top-1 right-1 bg-primary text-white rounded-full p-0.5">
+                                  <FiCheck className="w-3 h-3" />
+                                </div>
+                              ) : null}
+                              <p className={`text-[9px] font-black leading-tight truncate pr-4 ${inCart ? 'text-primary' : 'text-white/20'}`}>
+                                {inCart ? 'Seleccionado' : 'Disponible'}
+                              </p>
+                            </button>
                           </td>
                         );
                       })}
@@ -313,23 +362,56 @@ export default function SalonesPublic() {
 
             <div className="p-3 border-t border-white/5 flex items-center justify-center gap-4 text-[8px] font-black uppercase tracking-widest text-white/20">
               <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded bg-indigo-500/25 border border-indigo-500/40" /> Disponible
+                <div className="w-3 h-3 rounded bg-white/5 border border-white/10" /> Libre
               </div>
               <div className="flex items-center gap-1.5">
-                <FiMessageCircle className="text-[#25D366] w-3 h-3" /> Toca para apartar
+                <div className="w-3 h-3 rounded bg-primary/20 border border-primary" /> Seleccionado
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-3 h-3 rounded bg-red-500/20 border border-red-500/30" /> Ocupado
               </div>
             </div>
           </div>
         ) : (
           <div className="text-center py-20">
             <FiCalendar className="w-12 h-12 mx-auto mb-4 text-white/10" />
-            <p className="text-sm font-black uppercase tracking-widest text-white/20">No hay salones disponibles</p>
+            <p className="text-sm font-black uppercase tracking-widest text-white/20">No hay salones registrados</p>
           </div>
         )}
       </div>
 
-      {/* MODAL: RESERVAR */}
-      {showBookingModal && selectedSlot && (
+      {/* CARRITO FLOTANTE */}
+      {cart.length > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 p-4 md:p-6 z-40 animate-in slide-in-from-bottom-10 flex justify-center pointer-events-none">
+          <div className="bg-[#1F1F1F]/90 backdrop-blur-xl border border-white/10 p-3 md:p-4 rounded-3xl shadow-2xl flex items-center gap-4 md:gap-6 pointer-events-auto max-w-2xl w-full">
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                <FiShoppingCart /> {cart.length} {cart.length === 1 ? 'Horario Seleccionado' : 'Horarios Seleccionados'}
+              </p>
+              <div className="text-xs text-white/50 truncate flex gap-2 mt-1">
+                {cart.map((s, i) => (
+                  <span key={i} className="bg-white/5 px-2 py-0.5 rounded-md text-[9px] font-bold border border-white/5 shrink-0">
+                    {DIAS_CORTO[new Date(s.fecha).getDay() === 0 ? 6 : new Date(s.fecha).getDay() - 1]} {s.horaInicio}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                setBookingForm({ nombre: '', telefono: '' });
+                setBookingSuccess(false);
+                setShowBookingModal(true);
+              }}
+              className="bg-[#25D366] text-white px-5 py-3 rounded-2xl font-black uppercase text-[10px] md:text-xs tracking-widest flex items-center gap-2 hover:scale-105 active:scale-95 transition-all shadow-lg shadow-[#25D366]/20 shrink-0"
+            >
+              <FiMessageCircle className="text-base" /> Cotizar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: FORMULARIO DE COTIZACIÓN */}
+      {showBookingModal && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/80 backdrop-blur-xl">
           <div className="bg-[#161616] w-full max-w-md rounded-t-[2.5rem] sm:rounded-[2.5rem] border border-white/10 shadow-[0_0_50px_rgba(0,0,0,1)] overflow-hidden animate-in slide-in-from-bottom-10 sm:zoom-in duration-300">
 
@@ -354,34 +436,29 @@ export default function SalonesPublic() {
                 <div className="p-6 border-b border-white/5">
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary mb-1">Apartar Horario</p>
-                      <h2 className="text-xl font-black uppercase tracking-tighter italic">{selectedSlot.salon?.nombre}</h2>
+                      <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary mb-1">Cotizar {cart.length} Horarios</p>
+                      <h2 className="text-lg font-black uppercase tracking-tighter italic">Ingresa tus datos</h2>
                     </div>
-                    <button onClick={() => setShowBookingModal(false)} className="p-2 bg-white/5 rounded-full text-white/40 hover:text-white transition">
+                    <button onClick={() => setShowBookingModal(false)} className="p-2 bg-white/5 rounded-full text-white/40 hover:text-white transition shrink-0 ml-4">
                       <FiX className="w-5 h-5" />
                     </button>
                   </div>
                 </div>
 
                 <div className="p-6 space-y-5">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-black/40 border border-white/5 p-4 rounded-2xl text-center">
-                      <FiCalendar className="text-primary mx-auto mb-1" />
-                      <p className="text-xs font-bold text-white">
-                        {new Date(selectedSlot.fecha).toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' })}
-                      </p>
-                    </div>
-                    <div className="bg-black/40 border border-white/5 p-4 rounded-2xl text-center">
-                      <FiClock className="text-secondary mx-auto mb-1" />
-                      <p className="text-xs font-bold text-white">{selectedSlot.horaInicio} - {selectedSlot.horaFin}</p>
-                    </div>
+                  <div className="bg-black/40 border border-white/5 p-4 rounded-2xl max-h-40 overflow-y-auto space-y-2 no-scrollbar">
+                    {cart.map((slot, idx) => (
+                      <div key={idx} className="flex justify-between items-center text-xs border-b border-white/5 pb-2 last:border-0 last:pb-0">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: slot.salon?.color || '#C5A473' }} />
+                          <span className="font-bold">{slot.salon?.nombre}</span>
+                        </div>
+                        <span className="text-white/50 font-black">
+                          {new Date(slot.fecha).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })} • {slot.horaInicio}
+                        </span>
+                      </div>
+                    ))}
                   </div>
-
-                  {selectedSlot.notas && (
-                    <div className="bg-black/40 border border-white/5 p-3 rounded-2xl text-center">
-                      <p className="text-xs font-bold text-white/60 uppercase">{selectedSlot.notas}</p>
-                    </div>
-                  )}
 
                   <div className="space-y-3">
                     <input
@@ -407,13 +484,9 @@ export default function SalonesPublic() {
                   >
                     <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 pointer-events-none" />
                     <div className="relative z-10 flex justify-center items-center gap-3 uppercase tracking-[0.2em] text-xs">
-                      <FiMessageCircle className="text-lg" /> Apartar por WhatsApp
+                      <FiMessageCircle className="text-lg" /> Solicitar por WhatsApp
                     </div>
                   </button>
-
-                  <p className="text-[8px] text-center text-white/20 uppercase font-black tracking-widest">
-                    Se abrirá WhatsApp con mensaje para el dueño
-                  </p>
                 </div>
               </>
             )}
