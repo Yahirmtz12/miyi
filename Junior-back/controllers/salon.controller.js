@@ -225,20 +225,13 @@ exports.confirmSlot = async (req, res) => {
   }
 };
 
-// PUT /api/salones/slots/:id/rechazar — Admin rechaza (regresa a disponible)
+// PUT /api/salones/slots/:id/rechazar — Admin rechaza (elimina el registro para liberar espacio)
 exports.rejectSlot = async (req, res) => {
   try {
-    const slot = await SalonSlot.findById(req.params.id);
+    const slot = await SalonSlot.findByIdAndDelete(req.params.id);
     if (!slot) return res.status(404).json({ msg: 'Slot no encontrado' });
 
-    slot.estado = 'disponible';
-    slot.reservadoPor = null;
-    slot.nombreReserva = '';
-    slot.telefonoReserva = '';
-    await slot.save();
-    
-    const populated = await slot.populate('salon', 'nombre color');
-    res.json(populated);
+    res.json({ msg: 'Reservación rechazada y espacio liberado', _id: req.params.id });
   } catch (error) {
     res.status(500).json({ msg: 'Error al rechazar', error: error.message });
   }
