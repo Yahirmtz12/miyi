@@ -31,25 +31,27 @@ app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 // --- IMPORTACIÓN DE RUTAS ---
 const authRoutes = require('./routes/auth.routes');
-const saleRoutes = require('./routes/sale.routes');
-const productRoutes = require('./routes/product.routes');
+// const saleRoutes = require('./routes/sale.routes'); // CAFETERÍA DESHABILITADA
+// const productRoutes = require('./routes/product.routes'); // CAFETERÍA DESHABILITADA
 const userRoutes = require('./routes/user.routes');
-const expenseRoutes = require('./routes/expense.routes');
+// const expenseRoutes = require('./routes/expense.routes'); // CAFETERÍA DESHABILITADA
 const membershipRoutes = require('./routes/membership.routes');
-const orderRoutes = require('./routes/order.routes'); // <-- ¡No olvides esta!
-const tableRoutes = require('./routes/table.routes'); // <-- Ruta de mesas
-const categoryRoutes = require('./routes/category.routes'); // <-- Ruta de categorías y extras
+// const orderRoutes = require('./routes/order.routes'); // CAFETERÍA DESHABILITADA
+// const tableRoutes = require('./routes/table.routes'); // CAFETERÍA DESHABILITADA
+// const categoryRoutes = require('./routes/category.routes'); // CAFETERÍA DESHABILITADA
+const salonRoutes = require('./routes/salon.routes');
 
 // --- REGISTRO DE RUTAS ---
-app.use('/api/products', productRoutes);
-app.use('/api/sales', saleRoutes);
+// app.use('/api/products', productRoutes); // CAFETERÍA DESHABILITADA
+// app.use('/api/sales', saleRoutes); // CAFETERÍA DESHABILITADA
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
-app.use('/api/expenses', expenseRoutes);
+// app.use('/api/expenses', expenseRoutes); // CAFETERÍA DESHABILITADA
 app.use('/api/membership', membershipRoutes);
-app.use('/api/orders', orderRoutes); // Ruta para Comandas/Cocina
-app.use('/api/tables', tableRoutes); // Ruta para Gestión de Mesas
-app.use('/api/categories', categoryRoutes); // Ruta para Categorías y Extras
+// app.use('/api/orders', orderRoutes); // CAFETERÍA DESHABILITADA
+// app.use('/api/tables', tableRoutes); // CAFETERÍA DESHABILITADA
+// app.use('/api/categories', categoryRoutes); // CAFETERÍA DESHABILITADA
+app.use('/api/salones', salonRoutes);
 
 // Ruta prueba
 app.get('/', (req, res) => {

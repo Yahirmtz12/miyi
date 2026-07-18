@@ -16,14 +16,15 @@ export default function DashboardLayout() {
   }
 
   const allNavItems = [
-    { to: "/dashboard/sales", label: "Ventas", icon: "shopping_bag", roles: ['admin', 'cajero'] },
+    // { to: "/dashboard/sales", label: "Ventas", icon: "shopping_bag", roles: ['admin', 'cajero'] }, // CAFETERÍA DESHABILITADA
     { to: "/dashboard/users", label: "Usuarios", icon: "group", roles: ['admin'] },
     { to: "/dashboard/loyalty", label: "Membresía", icon: "redeem", roles: ['admin', 'cajero'] },
     { to: "/dashboard/kiosko", label: "Kiosko", icon: "backpack", roles: ['admin', 'kiosko', 'cajero'] },
-    { to: "/dashboard/inventory", label: "Inventario", icon: "inventory_2", roles: ['admin'] },
-    { to: "/dashboard/reports", label: "Análisis", icon: "analytics", roles: ['admin'] },
-    { to: "/dashboard/history", label: "Historial", icon: "history", roles: ['admin', 'cajero'] },
-    { to: "/dashboard/expenses", label: "Gastos", icon: "receipt_long", roles: ['admin', 'cajero'] },
+    { to: "/dashboard/salones", label: "Salones", icon: "event", roles: ['admin'] },
+    // { to: "/dashboard/inventory", label: "Inventario", icon: "inventory_2", roles: ['admin'] }, // CAFETERÍA DESHABILITADA
+    // { to: "/dashboard/reports", label: "Análisis", icon: "analytics", roles: ['admin'] }, // CAFETERÍA DESHABILITADA
+    // { to: "/dashboard/history", label: "Historial", icon: "history", roles: ['admin', 'cajero'] }, // CAFETERÍA DESHABILITADA
+    // { to: "/dashboard/expenses", label: "Gastos", icon: "receipt_long", roles: ['admin', 'cajero'] }, // CAFETERÍA DESHABILITADA
   ];
 
   const navItems = allNavItems.filter(item => item.roles.includes(rol));

@@ -1,9 +1,12 @@
 import { useState, useEffect } from "react";
 import { QRCodeCanvas } from "qrcode.react";
-import { FiStar, FiCalendar, FiLogOut, FiInfo, FiActivity, FiClock, FiPhone, FiCheckCircle, FiLoader } from "react-icons/fi";
+import { FiStar, FiCalendar, FiLogOut, FiInfo, FiActivity, FiClock, FiPhone, FiCheckCircle, FiLoader, FiMessageCircle, FiChevronLeft, FiChevronRight, FiMapPin } from "react-icons/fi";
 import { GiChickenLeg } from "react-icons/gi";
 import logoEmpresa from "../assets/logo.png";
 import { API_URL } from "../api";
+
+const DIAS_CORTO = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+const WHATSAPP_OWNER = '9515571964';
 
 export default function CustomerDashboard() {
   const [user, setUser] = useState(null);
@@ -12,6 +15,14 @@ export default function CustomerDashboard() {
   const [phoneLoading, setPhoneLoading] = useState(false);
   const [phoneError, setPhoneError] = useState("");
   const [phoneSaved, setPhoneSaved] = useState(false);
+
+  // --- SALONES ---
+  const [salones, setSalones] = useState([]);
+  const [salonSlots, setSalonSlots] = useState([]);
+  const [salonWeekOffset, setSalonWeekOffset] = useState(0);
+  const [salonLoading, setSalonLoading] = useState(true);
+  const [bookingSlot, setBookingSlot] = useState(null);
+  const [bookingSent, setBookingSent] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -34,7 +45,87 @@ export default function CustomerDashboard() {
       }
     };
     fetchData();
+    fetchSalones();
   }, []);
+
+  // Fetch salones
+  const fetchSalones = async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/salones`);
+      const data = await res.json();
+      setSalones(data);
+    } catch (err) { console.error('Error cargando salones'); }
+  };
+
+  // Semana de salones
+  const getSalonWeekDates = () => {
+    const today = new Date();
+    const start = new Date(today);
+    start.setDate(today.getDate() - today.getDay() + (salonWeekOffset * 7));
+    const dates = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      dates.push(d);
+    }
+    return dates;
+  };
+
+  const salonWeekDates = getSalonWeekDates();
+
+  useEffect(() => {
+    const fetchSalonSlots = async () => {
+      setSalonLoading(true);
+      const desde = salonWeekDates[0].toISOString().split('T')[0];
+      const hasta = salonWeekDates[6].toISOString().split('T')[0];
+      try {
+        const res = await fetch(`${API_URL}/api/salones/slots?desde=${desde}&hasta=${hasta}`);
+        const data = await res.json();
+        setSalonSlots(data);
+      } catch (err) { console.error('Error cargando slots'); }
+      finally { setSalonLoading(false); }
+    };
+    fetchSalonSlots();
+  }, [salonWeekOffset]);
+
+  const getAvailableSlots = (date, salonId) => {
+    const dateStr = date.toISOString().split('T')[0];
+    return salonSlots.filter(s => {
+      const slotDate = new Date(s.fecha).toISOString().split('T')[0];
+      const id = typeof s.salon === 'object' ? s.salon._id : s.salon;
+      return slotDate === dateStr && id === salonId && s.estado === 'disponible';
+    });
+  };
+
+  const handleSalonWhatsApp = (slot) => {
+    const salonName = slot.salon?.nombre || 'Salón';
+    const fecha = new Date(slot.fecha).toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
+    const horario = `${slot.horaInicio} a ${slot.horaFin}`;
+    const nombre = user?.nombre || '';
+
+    let msg = `¡Hola! 👋 Soy *${nombre}*, miembro de Rhythm. Me interesa apartar el *${salonName}* el día *${fecha}* de *${horario}*. ¿Cuál sería el precio? 🙏`;
+
+    const url = `https://wa.me/52${WHATSAPP_OWNER}?text=${encodeURIComponent(msg)}`;
+    window.open(url, '_blank');
+
+    // Best-effort: marcar como reservado
+    const token = localStorage.getItem('token');
+    fetch(`${API_URL}/api/salones/slots/${slot._id}/reservar`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify({ nombre: user?.nombre, telefono: user?.telefono || '' }),
+    }).catch(() => {});
+
+    setBookingSent(true);
+    setTimeout(() => setBookingSent(false), 4000);
+  };
+
+  const isSalonToday = (date) => date.toDateString() === new Date().toDateString();
+  const isSalonPast = (date) => {
+    const today = new Date(); today.setHours(0,0,0,0);
+    const d = new Date(date); d.setHours(0,0,0,0);
+    return d < today;
+  };
 
   const totalVisitas = user?.visitas?.length || 0;
   const patitasActivas = totalVisitas % 7 === 0 && totalVisitas > 0 ? 7 : totalVisitas % 7;
@@ -249,6 +340,88 @@ export default function CustomerDashboard() {
         </div>
       </div>
 
+
+      {/* SECCIÓN: RESERVAR SALÓN */}
+      <div className="w-full max-w-md mt-8">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="p-2 bg-primary/10 rounded-xl border border-primary/20">
+            <FiMapPin className="text-primary" size={16} />
+          </div>
+          <div>
+            <h2 className="text-sm font-black uppercase tracking-tight">Reservar Salón</h2>
+            <p className="text-[9px] text-white/30 font-bold uppercase tracking-widest">Selecciona un horario disponible</p>
+          </div>
+        </div>
+
+        {/* Toast de envío */}
+        {bookingSent && (
+          <div className="mb-4 bg-[#25D366]/10 border border-[#25D366]/20 p-3 rounded-2xl flex items-center gap-2 animate-in slide-in-from-top-3">
+            <FiCheckCircle className="text-[#25D366]" />
+            <span className="text-[10px] font-bold text-[#25D366] uppercase tracking-wider">Mensaje enviado por WhatsApp</span>
+          </div>
+        )}
+
+        {/* Navegador de semana mini */}
+        <div className="flex items-center justify-between bg-white/[0.03] border border-white/5 rounded-2xl p-3 mb-4">
+          <button onClick={() => setSalonWeekOffset(prev => Math.max(0, prev - 1))} disabled={salonWeekOffset === 0} className="p-2 bg-white/5 rounded-xl transition-all disabled:opacity-20">
+            <FiChevronLeft className="w-4 h-4" />
+          </button>
+          <p className="text-[10px] font-black uppercase tracking-widest text-white/40">
+            {salonWeekDates[0].toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })} — {salonWeekDates[6].toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}
+          </p>
+          <button onClick={() => setSalonWeekOffset(prev => prev + 1)} className="p-2 bg-white/5 rounded-xl transition-all">
+            <FiChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Salones */}
+        {salonLoading ? (
+          <div className="flex justify-center py-8"><FiLoader className="animate-spin text-primary w-6 h-6" /></div>
+        ) : (
+          <div className="space-y-4">
+            {salones.map(salon => (
+              <div key={salon._id} className="bg-white/[0.02] border border-white/5 rounded-[2rem] overflow-hidden">
+                <div className="flex items-center gap-2 px-4 py-3 border-b border-white/5" style={{ background: `linear-gradient(90deg, ${salon.color}10, transparent)` }}>
+                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: salon.color }} />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-white/60">{salon.nombre}</span>
+                </div>
+                <div className="grid grid-cols-7 gap-px">
+                  {salonWeekDates.map((date, i) => {
+                    const daySlots = getAvailableSlots(date, salon._id);
+                    const past = isSalonPast(date);
+                    return (
+                      <div key={i} className={`p-1.5 min-h-[60px] ${past ? 'opacity-20' : ''} ${isSalonToday(date) ? 'bg-primary/[0.04]' : ''}`}>
+                        <p className={`text-[7px] font-black uppercase text-center mb-1 ${isSalonToday(date) ? 'text-primary' : 'text-white/15'}`}>
+                          {DIAS_CORTO[date.getDay()]} {date.getDate()}
+                        </p>
+                        {daySlots.map(slot => (
+                          <button
+                            key={slot._id}
+                            onClick={() => !past && handleSalonWhatsApp(slot)}
+                            disabled={past}
+                            className="w-full text-left p-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 active:scale-95 transition-all mb-1"
+                          >
+                            <p className="text-[8px] font-black">{slot.horaInicio}</p>
+                            <p className="text-[7px] opacity-50">{slot.horaFin}</p>
+                          </button>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+            {salones.length === 0 && (
+              <p className="text-center text-white/20 text-xs py-6 font-bold uppercase tracking-widest">Sin salones disponibles</p>
+            )}
+          </div>
+        )}
+
+        <div className="flex items-center justify-center gap-2 mt-4 text-[8px] text-white/20 font-bold uppercase tracking-widest">
+          <FiMessageCircle className="text-[#25D366] w-3 h-3" />
+          Toca un horario para apartar vía WhatsApp
+        </div>
+      </div>
 
       {/* FOOTER INFO */}
       <div className="w-full max-w-md mt-6 bg-primary/5 border border-primary/20 p-4 rounded-[2rem] flex gap-3 items-center">
