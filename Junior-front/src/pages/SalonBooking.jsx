@@ -46,6 +46,13 @@ function hashString(str) {
   return Math.abs(hash);
 }
 
+const getLocalYMD = (date) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
+
 export default function SalonBooking() {
   const [salones, setSalones] = useState([]);
   const [slots, setSlots] = useState([]);
@@ -77,6 +84,7 @@ export default function SalonBooking() {
   // Obtener la semana (empezando en Lunes)
   const getWeekDates = () => {
     const today = new Date();
+    today.setHours(0, 0, 0, 0);
     const dayOfWeek = today.getDay();
     const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // Lunes como primer día
     const startOfWeek = new Date(today);
@@ -92,8 +100,8 @@ export default function SalonBooking() {
   };
 
   const weekDates = getWeekDates();
-  const desde = weekDates[0].toISOString().split('T')[0];
-  const hasta = weekDates[6].toISOString().split('T')[0];
+  const desde = getLocalYMD(weekDates[0]);
+  const hasta = getLocalYMD(weekDates[6]);
 
   const showToast = (msg, type = 'success') => {
     setToast(msg);
@@ -209,9 +217,9 @@ export default function SalonBooking() {
 
   const getSlotForCell = (date, franja) => {
     if (!activeSalon) return null;
-    const dateStr = date.toISOString().split('T')[0];
+    const dateStr = getLocalYMD(date);
     return slots.find(s => {
-      const slotDate = new Date(s.fecha).toISOString().split('T')[0];
+      const slotDate = getLocalYMD(new Date(s.fecha));
       const slotSalonId = typeof s.salon === 'object' ? s.salon._id : s.salon;
       if (slotDate !== dateStr || slotSalonId !== activeSalon._id) return false;
       // El slot cubre esta franja si horaInicio <= franja.inicio y horaFin > franja.inicio
@@ -503,7 +511,7 @@ export default function SalonBooking() {
                               onClick={() => {
                                 setNewSlot({
                                   salon: activeSalon._id,
-                                  fecha: date.toISOString().split('T')[0],
+                                  fecha: getLocalYMD(date),
                                   horaInicio: franja.inicio,
                                   horaFin: franja.fin,
                                   notas: '',

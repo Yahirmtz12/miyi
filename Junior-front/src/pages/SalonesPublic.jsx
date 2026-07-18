@@ -39,6 +39,13 @@ function hashString(str) {
   return Math.abs(hash);
 }
 
+const getLocalYMD = (date) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
+
 export default function SalonesPublic() {
   const [salones, setSalones] = useState([]);
   const [slots, setSlots] = useState([]); // Estos ahora representan los OCUPADOS (creados por admin o apartados)
@@ -57,6 +64,7 @@ export default function SalonesPublic() {
   // Semana empezando en Lunes
   const getWeekDates = () => {
     const today = new Date();
+    today.setHours(0, 0, 0, 0);
     const dayOfWeek = today.getDay();
     const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
     const startOfWeek = new Date(today);
@@ -71,8 +79,8 @@ export default function SalonesPublic() {
   };
 
   const weekDates = getWeekDates();
-  const desde = weekDates[0].toISOString().split('T')[0];
-  const hasta = weekDates[6].toISOString().split('T')[0];
+  const desde = getLocalYMD(weekDates[0]);
+  const hasta = getLocalYMD(weekDates[6]);
 
   useEffect(() => { fetchSalones(); }, []);
   useEffect(() => { fetchSlots(); }, [weekOffset]);
@@ -99,9 +107,9 @@ export default function SalonesPublic() {
 
   const getSlotForCell = (date, franja) => {
     if (!activeSalon) return null;
-    const dateStr = date.toISOString().split('T')[0];
+    const dateStr = getLocalYMD(date);
     return slots.find(s => {
-      const slotDate = new Date(s.fecha).toISOString().split('T')[0];
+      const slotDate = getLocalYMD(new Date(s.fecha));
       const slotSalonId = typeof s.salon === 'object' ? s.salon._id : s.salon;
       if (slotDate !== dateStr || slotSalonId !== activeSalon._id) return false;
       return s.horaInicio <= franja.inicio && s.horaFin > franja.inicio;
@@ -129,12 +137,13 @@ export default function SalonesPublic() {
   };
 
   const toggleCartSlot = (date, franja) => {
-    const slotId = `${date.getTime()}-${franja.inicio}`;
+    const dateStr = getLocalYMD(date);
+    const slotId = `${dateStr}-${franja.inicio}`;
     const slotData = {
       _id: slotId,
       salonId: activeSalon._id,
       salon: activeSalon,
-      fecha: date.toISOString(),
+      fecha: dateStr,
       horaInicio: franja.inicio,
       horaFin: franja.fin,
     };
@@ -150,7 +159,8 @@ export default function SalonesPublic() {
   };
 
   const isSlotInCart = (date, franja) => {
-    const slotId = `${date.getTime()}-${franja.inicio}`;
+    const dateStr = getLocalYMD(date);
+    const slotId = `${dateStr}-${franja.inicio}`;
     return cart.some(s => s._id === slotId);
   };
 
