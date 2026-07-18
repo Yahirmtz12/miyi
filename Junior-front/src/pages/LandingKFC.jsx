@@ -118,6 +118,24 @@ export default function RhythmOaxacaPage() {
         <div className="absolute bottom-0 w-full h-[1px] bg-gradient-to-r from-transparent via-[#C5A473]/50 to-transparent" />
       </div>
 
+      {/* SECCIÓN: RENTA DE SALONES */}
+      <div className="relative z-10 max-w-6xl mx-auto px-6 py-12">
+        <div className="bg-neutral-900/50 border border-[#C5A473]/30 rounded-[3rem] p-10 md:p-16 text-center shadow-[0_0_50px_rgba(197,164,115,0.1)] flex flex-col items-center justify-center backdrop-blur-md">
+          <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tight mb-4">
+            Renta tu espacio en <span className="text-[#C5A473]">Nuestras Instalaciones</span>
+          </h2>
+          <p className="text-neutral-400 text-base md:text-lg max-w-2xl mx-auto font-light mb-8">
+            ¿Necesitas un lugar para ensayar, dar clases o realizar un evento? Conoce la disponibilidad de nuestros salones y aparta tu horario.
+          </p>
+          <button
+            onClick={() => window.location.href = "/salones"}
+            className="group relative inline-flex items-center justify-center gap-3 px-10 py-4 bg-white text-black hover:bg-neutral-200 rounded-full font-black text-sm md:text-base uppercase tracking-widest transition-all hover:scale-105"
+          >
+            Ver Salones y Horarios
+          </button>
+        </div>
+      </div>
+
       {/* SECCIÓN: CLASES Y SERVICIOS */}
       <div className="relative z-10 max-w-7xl mx-auto px-6 py-20">
   <div className="text-center mb-16">
