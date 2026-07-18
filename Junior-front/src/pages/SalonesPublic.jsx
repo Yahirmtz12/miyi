@@ -59,6 +59,7 @@ export default function SalonesPublic() {
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [bookingForm, setBookingForm] = useState({ nombre: '', telefono: '' });
   const [bookingSuccess, setBookingSuccess] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
 
   // Semana empezando en Lunes
@@ -168,6 +169,7 @@ export default function SalonesPublic() {
 
   const handleWhatsAppBook = async () => {
     if (cart.length === 0) return;
+    setIsSubmitting(true);
 
     let mensaje = `¡Hola! 👋 Me interesa rentar los siguientes horarios:\n\n`;
     
@@ -180,8 +182,6 @@ export default function SalonesPublic() {
     if (bookingForm.nombre) mensaje += `\nMi nombre es: *${bookingForm.nombre}*`;
     if (bookingForm.telefono) mensaje += `\nMi teléfono: ${bookingForm.telefono}`;
     mensaje += `\n\n¿Cuál sería el precio total para apartar? 🙏`;
-
-    window.open(`https://wa.me/52${WHATSAPP_OWNER}?text=${encodeURIComponent(mensaje)}`, '_blank');
 
     if (bookingForm.nombre) {
       try {
@@ -199,8 +199,11 @@ export default function SalonesPublic() {
       }
     }
 
+    window.open(`https://wa.me/52${WHATSAPP_OWNER}?text=${encodeURIComponent(mensaje)}`, '_blank');
+
     setBookingSuccess(true);
     setCart([]); 
+    setIsSubmitting(false);
   };
 
   return (
@@ -332,7 +335,7 @@ export default function SalonesPublic() {
                                 style={{ backgroundColor: color.bg, border: `1px solid ${color.border}` }}
                               >
                                 <p className="text-[9px] font-black leading-tight truncate flex items-center gap-1" style={{ color: color.text }}>
-                                  <FiAlertCircle className="w-3 h-3 shrink-0" /> {slot.estado === 'reservado' ? 'Pendiente' : (slot.notas || 'Ocupado')}
+                                  <FiAlertCircle className="w-3 h-3 shrink-0" /> {slot.estado === 'reservado' ? 'Pendiente' : 'Ocupado'}
                                 </p>
                                 <p className="text-[7px] opacity-40 mt-0.5" style={{ color: color.text }}>
                                   {slot.horaInicio}–{slot.horaFin}
@@ -491,12 +494,16 @@ export default function SalonesPublic() {
 
                   <button
                     onClick={handleWhatsAppBook}
-                    disabled={!bookingForm.nombre.trim()}
+                    disabled={!bookingForm.nombre.trim() || isSubmitting}
                     className="w-full relative overflow-hidden group bg-[#25D366] text-white font-black py-5 rounded-2xl shadow-[0_10px_30px_rgba(37,211,102,0.3)] transition-all active:scale-[0.98] disabled:opacity-30"
                   >
                     <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 pointer-events-none" />
                     <div className="relative z-10 flex justify-center items-center gap-3 uppercase tracking-[0.2em] text-xs">
-                      <FiMessageCircle className="text-lg" /> Solicitar por WhatsApp
+                      {isSubmitting ? (
+                        <><FiLoader className="text-lg animate-spin" /> Procesando...</>
+                      ) : (
+                        <><FiMessageCircle className="text-lg" /> Solicitar por WhatsApp</>
+                      )}
                     </div>
                   </button>
                 </div>
