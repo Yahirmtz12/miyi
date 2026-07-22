@@ -29,6 +29,8 @@ const SLOT_COLORS = [
   { bg: 'rgba(232,121,249,0.25)', border: 'rgba(232,121,249,0.4)', text: '#e879f9' },
   { bg: 'rgba(250,204,21,0.25)', border: 'rgba(250,204,21,0.4)', text: '#fde047' },
   { bg: 'rgba(45,212,191,0.25)', border: 'rgba(45,212,191,0.4)', text: '#5eead4' },
+  { bg: 'rgba(248,113,113,0.25)', border: 'rgba(248,113,113,0.4)', text: '#fca5a5' },
+  { bg: 'rgba(96,165,250,0.25)', border: 'rgba(96,165,250,0.4)', text: '#93c5fd' },
 ];
 
 function hashString(str) {
@@ -132,6 +134,7 @@ export default function SalonesPublic() {
       const c = slot.color;
       return { bg: c + '30', border: c + '60', text: c };
     }
+    if (slot.estado === 'reservado') return { bg: 'rgba(251,191,36,0.2)', border: 'rgba(251,191,36,0.4)', text: '#fbbf24' };
     // 2. Fallback: color basado en hash de notas (misma lógica que SalonBooking)
     const key = slot.notas || slot._id || '';
     const idx = hashString(key) % SLOT_COLORS.length;
