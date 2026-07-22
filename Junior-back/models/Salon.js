@@ -14,6 +14,10 @@ const salonSchema = new mongoose.Schema({
     type: String,
     default: '#C5A473', // primary color por defecto
   },
+  colorOcupado: {
+    type: String,
+    default: '#ef4444', // rojo por defecto para horarios ocupados
+  },
   activo: {
     type: Boolean,
     default: true,

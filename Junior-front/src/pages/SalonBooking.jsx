@@ -76,7 +76,7 @@ export default function SalonBooking() {
     repetirSemanalmente: false,
     repetirHasta: '',
   });
-  const [salonForm, setSalonForm] = useState({ nombre: '', descripcion: '', color: '#C5A473' });
+  const [salonForm, setSalonForm] = useState({ nombre: '', descripcion: '', color: '#C5A473', colorOcupado: '#ef4444' });
 
   const token = localStorage.getItem("token");
   const headers = { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
@@ -145,7 +145,7 @@ export default function SalonBooking() {
         fetchSalones();
         setShowSalonModal(false);
         setEditingSalon(null);
-        setSalonForm({ nombre: '', descripcion: '', color: '#C5A473' });
+        setSalonForm({ nombre: '', descripcion: '', color: '#C5A473', colorOcupado: '#ef4444' });
         showToast(editingSalon ? 'Salón actualizado' : 'Salón creado');
       } else {
         showToast(data.msg || 'Error al guardar salón', 'error');
@@ -289,7 +289,7 @@ export default function SalonBooking() {
         <div className="flex gap-3">
           <button
             onClick={() => {
-              setSalonForm({ nombre: '', descripcion: '', color: '#C5A473' });
+              setSalonForm({ nombre: '', descripcion: '', color: '#C5A473', colorOcupado: '#ef4444' });
               setEditingSalon(null);
               setShowSalonModal(true);
             }}
@@ -334,7 +334,7 @@ export default function SalonBooking() {
                 onClick={(e) => {
                   e.stopPropagation();
                   setEditingSalon(salon);
-                  setSalonForm({ nombre: salon.nombre, descripcion: salon.descripcion || '', color: salon.color });
+                  setSalonForm({ nombre: salon.nombre, descripcion: salon.descripcion || '', color: salon.color, colorOcupado: salon.colorOcupado || '#ef4444' });
                   setShowSalonModal(true);
                 }}
                 className="p-1 text-white/20 hover:text-white/60 transition-all ml-1"
@@ -771,7 +771,7 @@ export default function SalonBooking() {
                       <div className="flex gap-2">
                         <button onClick={() => {
                           setEditingSalon(s);
-                          setSalonForm({ nombre: s.nombre, descripcion: s.descripcion || '', color: s.color });
+                          setSalonForm({ nombre: s.nombre, descripcion: s.descripcion || '', color: s.color, colorOcupado: s.colorOcupado || '#ef4444' });
                         }} className="p-2 bg-white/5 hover:bg-primary/20 text-white/40 hover:text-primary rounded-xl transition-all">
                           <FiEdit3 className="w-4 h-4" />
                         </button>
@@ -811,6 +811,16 @@ export default function SalonBooking() {
                     className="w-10 h-10 rounded-xl border border-white/10 cursor-pointer bg-transparent"
                   />
                   <div className="w-8 h-8 rounded-full border border-white/10" style={{ backgroundColor: salonForm.color }} />
+                </div>
+                <div className="flex items-center gap-4">
+                  <label className="text-[10px] font-black text-white/30 uppercase tracking-widest">Color Ocupados</label>
+                  <input
+                    type="color"
+                    value={salonForm.colorOcupado}
+                    onChange={(e) => setSalonForm({ ...salonForm, colorOcupado: e.target.value })}
+                    className="w-10 h-10 rounded-xl border border-white/10 cursor-pointer bg-transparent"
+                  />
+                  <div className="w-8 h-8 rounded-full border border-white/10" style={{ backgroundColor: salonForm.colorOcupado }} />
                 </div>
                 <button
                   onClick={handleSaveSalon}

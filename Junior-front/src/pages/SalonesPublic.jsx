@@ -127,6 +127,11 @@ export default function SalonesPublic() {
   };
 
   const getSlotColor = (slot) => {
+    // Usar el colorOcupado del salón activo si existe
+    if (activeSalon?.colorOcupado) {
+      const c = activeSalon.colorOcupado;
+      return { bg: c + '30', border: c + '60', text: c };
+    }
     const key = slot.notas || slot._id || '';
     const idx = hashString(key) % SLOT_COLORS.length;
     return SLOT_COLORS[idx];
@@ -175,7 +180,7 @@ export default function SalonesPublic() {
     
     cart.forEach((slot, index) => {
       const salon = slot.salon?.nombre || 'Salón';
-      const fecha = new Date(slot.fecha).toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
+      const fecha = new Date(slot.fecha + 'T12:00:00').toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
       mensaje += `*${index + 1}. ${salon}* - ${fecha} de *${slot.horaInicio} a ${slot.horaFin}*\n`;
     });
 
@@ -183,6 +188,11 @@ export default function SalonesPublic() {
     if (bookingForm.telefono) mensaje += `\nMi teléfono: ${bookingForm.telefono}`;
     mensaje += `\n\n¿Cuál sería el precio total para apartar? 🙏`;
 
+    // Abrir WhatsApp PRIMERO (en contexto de click del usuario) para evitar bloqueo de popup
+    const whatsappUrl = `https://wa.me/52${WHATSAPP_OWNER}?text=${encodeURIComponent(mensaje)}`;
+    window.open(whatsappUrl, '_blank');
+
+    // Luego registrar la reservación en el backend
     if (bookingForm.nombre) {
       try {
         await fetch(`${API_URL}/api/salones/reservar-publico`, {
@@ -198,8 +208,6 @@ export default function SalonesPublic() {
         console.error('Error al reservar', err);
       }
     }
-
-    window.open(`https://wa.me/52${WHATSAPP_OWNER}?text=${encodeURIComponent(mensaje)}`, '_blank');
 
     setBookingSuccess(true);
     setCart([]); 
@@ -335,7 +343,7 @@ export default function SalonesPublic() {
                                 style={{ backgroundColor: color.bg, border: `1px solid ${color.border}` }}
                               >
                                 <p className="text-[9px] font-black leading-tight truncate flex items-center gap-1" style={{ color: color.text }}>
-                                  <FiAlertCircle className="w-3 h-3 shrink-0" /> {slot.estado === 'reservado' ? 'Pendiente' : 'Ocupado'}
+                                  <FiAlertCircle className="w-3 h-3 shrink-0" /> {slot.notas || slot.nombreReserva || (slot.estado === 'reservado' ? 'Pendiente' : 'Ocupado')}
                                 </p>
                                 <p className="text-[7px] opacity-40 mt-0.5" style={{ color: color.text }}>
                                   {slot.horaInicio}–{slot.horaFin}
@@ -404,11 +412,15 @@ export default function SalonesPublic() {
                 <FiShoppingCart /> {cart.length} {cart.length === 1 ? 'Horario Seleccionado' : 'Horarios Seleccionados'}
               </p>
               <div className="text-xs text-white/50 truncate flex gap-2 mt-1">
-                {cart.map((s, i) => (
+                {cart.map((s, i) => {
+                  const cartDate = new Date(s.fecha + 'T12:00:00');
+                  return (
                   <span key={i} className="bg-white/5 px-2 py-0.5 rounded-md text-[9px] font-bold border border-white/5 shrink-0">
-                    {DIAS_CORTO[new Date(s.fecha).getDay() === 0 ? 6 : new Date(s.fecha).getDay() - 1]} {s.horaInicio}
+                    {DIAS_CORTO[cartDate.getDay() === 0 ? 6 : cartDate.getDay() - 1]} {cartDate.getDate()} • {s.horaInicio}
                   </span>
-                ))}
+                  );
+                }
+}
               </div>
             </div>
             <button
@@ -469,7 +481,7 @@ export default function SalonesPublic() {
                           <span className="font-bold">{slot.salon?.nombre}</span>
                         </div>
                         <span className="text-white/50 font-black">
-                          {new Date(slot.fecha).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })} • {slot.horaInicio}
+                          {new Date(slot.fecha + 'T12:00:00').toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })} • {slot.horaInicio}
                         </span>
                       </div>
                     ))}

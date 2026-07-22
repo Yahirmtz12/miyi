@@ -18,8 +18,8 @@ exports.getSalones = async (req, res) => {
 // POST /api/salones — Crear nuevo salón (admin)
 exports.createSalon = async (req, res) => {
   try {
-    const { nombre, descripcion, color } = req.body;
-    const salon = new Salon({ nombre, descripcion, color });
+    const { nombre, descripcion, color, colorOcupado } = req.body;
+    const salon = new Salon({ nombre, descripcion, color, colorOcupado });
     await salon.save();
     res.status(201).json(salon);
   } catch (error) {
@@ -30,10 +30,10 @@ exports.createSalon = async (req, res) => {
 // PUT /api/salones/:id — Editar salón (admin)
 exports.updateSalon = async (req, res) => {
   try {
-    const { nombre, descripcion, color } = req.body;
+    const { nombre, descripcion, color, colorOcupado } = req.body;
     const salon = await Salon.findByIdAndUpdate(
       req.params.id,
-      { nombre, descripcion, color },
+      { nombre, descripcion, color, colorOcupado },
       { new: true }
     );
     if (!salon) return res.status(404).json({ msg: 'Salón no encontrado' });
