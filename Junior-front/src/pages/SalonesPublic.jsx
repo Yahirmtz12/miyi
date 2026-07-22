@@ -419,8 +419,7 @@ export default function SalonesPublic() {
                     {DIAS_CORTO[cartDate.getDay() === 0 ? 6 : cartDate.getDay() - 1]} {cartDate.getDate()} • {s.horaInicio}
                   </span>
                   );
-                }
-}
+                })
               </div>
             </div>
             <button
