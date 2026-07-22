@@ -92,7 +92,7 @@ exports.getSlots = async (req, res) => {
 // POST /api/salones/slots — Crear bloque de disponibilidad (admin)
 exports.createSlot = async (req, res) => {
   try {
-    const { salon, fecha, horaInicio, horaFin, notas, repetirSemanalmente, repetirHasta } = req.body;
+    const { salon, fecha, horaInicio, horaFin, notas, color, repetirSemanalmente, repetirHasta } = req.body;
 
     const startDate = new Date(fecha);
     const endDate = (repetirSemanalmente && repetirHasta) ? new Date(repetirHasta) : new Date(fecha);
@@ -138,6 +138,7 @@ exports.createSlot = async (req, res) => {
       horaInicio,
       horaFin,
       notas,
+      color: color || '',
       estado: 'confirmado',
     }));
 
@@ -263,6 +264,32 @@ exports.publicReserveSlots = async (req, res) => {
     res.status(201).json({ msg: 'Reservaciones creadas exitosamente' });
   } catch (error) {
     res.status(500).json({ msg: 'Error al reservar', error: error.message });
+  }
+};
+
+// PUT /api/salones/slots/bulk-color — Cambiar color de todos los slots con el mismo nombre/notas
+exports.bulkUpdateColor = async (req, res) => {
+  try {
+    const { slotId, color } = req.body;
+    
+    // Buscar el slot original para obtener su notas y salon
+    const originalSlot = await SalonSlot.findById(slotId);
+    if (!originalSlot) return res.status(404).json({ msg: 'Slot no encontrado' });
+
+    // Construir filtro: mismo salon + mismas notas (si tiene notas)
+    const filter = { salon: originalSlot.salon };
+    if (originalSlot.notas) {
+      filter.notas = originalSlot.notas;
+    } else {
+      // Si no tiene notas, solo actualizar este slot individual
+      filter._id = slotId;
+    }
+
+    const result = await SalonSlot.updateMany(filter, { color: color || '' });
+    
+    res.json({ msg: `${result.modifiedCount} horarios actualizados`, modifiedCount: result.modifiedCount });
+  } catch (error) {
+    res.status(500).json({ msg: 'Error al actualizar colores', error: error.message });
   }
 };
 

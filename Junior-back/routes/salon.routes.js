@@ -12,6 +12,7 @@ router.delete('/:id', verifyToken, isAdmin, salonCtrl.deleteSalon); // Admin: de
 // --- SLOTS DE DISPONIBILIDAD ---
 router.get('/slots', salonCtrl.getSlots);                                    // Público: ver disponibilidad
 router.post('/slots', verifyToken, isAdmin, salonCtrl.createSlot);           // Admin: crear bloque
+router.put('/slots/bulk-color', verifyToken, isAdmin, salonCtrl.bulkUpdateColor); // Admin: cambiar color en grupo
 router.put('/slots/:id', verifyToken, isAdmin, salonCtrl.updateSlot);        // Admin: editar bloque
 router.delete('/slots/:id', verifyToken, isAdmin, salonCtrl.deleteSlot);     // Admin: eliminar bloque
 router.post('/slots/:id/reservar', salonCtrl.reserveSlot);                   // Público: reservar slot

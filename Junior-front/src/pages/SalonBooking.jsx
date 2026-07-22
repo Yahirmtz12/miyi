@@ -38,6 +38,22 @@ const SLOT_COLORS = [
   { bg: 'rgba(96,165,250,0.25)', border: 'rgba(96,165,250,0.4)', text: '#93c5fd' },    // blue
 ];
 
+// Paleta de colores predefinidos para selección rápida
+const PRESET_COLORS = [
+  { color: '#6366f1', label: 'Índigo' },
+  { color: '#ec4899', label: 'Rosa' },
+  { color: '#22d3ee', label: 'Cyan' },
+  { color: '#fb923c', label: 'Naranja' },
+  { color: '#a3e635', label: 'Lima' },
+  { color: '#e879f9', label: 'Fucsia' },
+  { color: '#facc15', label: 'Amarillo' },
+  { color: '#2dd4bf', label: 'Teal' },
+  { color: '#f87171', label: 'Rojo' },
+  { color: '#60a5fa', label: 'Azul' },
+  { color: '#c084fc', label: 'Morado' },
+  { color: '#4ade80', label: 'Verde' },
+];
+
 function hashString(str) {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
@@ -73,6 +89,7 @@ export default function SalonBooking() {
     horaInicio: '09:00',
     horaFin: '10:00',
     notas: '',
+    color: '',
     repetirSemanalmente: false,
     repetirHasta: '',
   });
@@ -267,17 +284,18 @@ export default function SalonBooking() {
   // Contar pendientes
   const pendientes = slots.filter(s => s.estado === 'reservado');
 
-  // Cambiar color de un slot individual
+  // Cambiar color de todos los slots con el mismo nombre (bulk)
   const handleUpdateSlotColor = async (id, newColor) => {
     try {
-      const res = await fetch(`${API_URL}/api/salones/slots/${id}`, {
+      const res = await fetch(`${API_URL}/api/salones/slots/bulk-color`, {
         method: 'PUT', headers,
-        body: JSON.stringify({ color: newColor }),
+        body: JSON.stringify({ slotId: id, color: newColor }),
       });
+      const data = await res.json();
       if (res.ok) {
         fetchSlots();
         setSelectedSlot(prev => prev ? { ...prev, color: newColor } : null);
-        showToast('Color actualizado');
+        showToast(data.msg || 'Color actualizado');
       }
     } catch (err) { showToast('Error al cambiar color', 'error'); }
   };
@@ -649,6 +667,22 @@ export default function SalonBooking() {
                 />
               </div>
 
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-white/30 uppercase ml-2 tracking-widest">Color</label>
+                <div className="flex flex-wrap gap-2">
+                  {PRESET_COLORS.map((pc) => (
+                    <button
+                      key={pc.color}
+                      type="button"
+                      onClick={() => setNewSlot({ ...newSlot, color: newSlot.color === pc.color ? '' : pc.color })}
+                      className={`w-8 h-8 rounded-xl border-2 transition-all hover:scale-110 active:scale-95 ${newSlot.color === pc.color ? 'ring-2 ring-white ring-offset-2 ring-offset-[#1F1F1F] scale-110' : 'border-white/10'}`}
+                      style={{ backgroundColor: pc.color }}
+                      title={pc.label}
+                    />
+                  ))}
+                </div>
+              </div>
+
               <div className="space-y-2 pt-2">
                 <label className="flex items-center gap-2 cursor-pointer select-none">
                   <input
@@ -745,19 +779,31 @@ export default function SalonBooking() {
               )}
 
               <div className="bg-black/40 border border-white/5 p-4 rounded-2xl">
-                <p className="text-[9px] uppercase tracking-widest text-white/40 font-black mb-2">Color del horario</p>
-                <div className="flex items-center gap-3">
+                <p className="text-[9px] uppercase tracking-widest text-white/40 font-black mb-2">Color del horario {selectedSlot.notas ? `(todos los "${selectedSlot.notas}")` : ''}</p>
+                <div className="flex flex-wrap gap-2">
+                  {PRESET_COLORS.map((pc) => (
+                    <button
+                      key={pc.color}
+                      onClick={() => handleUpdateSlotColor(selectedSlot._id, pc.color)}
+                      className={`w-7 h-7 rounded-lg border-2 transition-all hover:scale-110 active:scale-95 ${selectedSlot.color === pc.color ? 'ring-2 ring-white ring-offset-2 ring-offset-[#1F1F1F] scale-110' : 'border-white/10'}`}
+                      style={{ backgroundColor: pc.color }}
+                      title={pc.label}
+                    />
+                  ))}
+                </div>
+                <div className="flex items-center gap-3 mt-3">
                   <input
                     type="color"
                     value={selectedSlot.color || getSlotColor(selectedSlot).text}
                     onChange={(e) => handleUpdateSlotColor(selectedSlot._id, e.target.value)}
-                    className="w-10 h-10 rounded-xl border border-white/10 cursor-pointer bg-transparent"
+                    className="w-8 h-8 rounded-lg border border-white/10 cursor-pointer bg-transparent"
+                    title="Color personalizado"
                   />
-                  <div className="w-8 h-8 rounded-full border border-white/10" style={{ backgroundColor: selectedSlot.color || getSlotColor(selectedSlot).text }} />
+                  <span className="text-[8px] text-white/20 font-bold uppercase tracking-widest">Personalizado</span>
                   {selectedSlot.color && (
                     <button
                       onClick={() => handleUpdateSlotColor(selectedSlot._id, '')}
-                      className="text-[9px] font-black uppercase tracking-widest text-white/30 hover:text-white/60 transition"
+                      className="text-[9px] font-black uppercase tracking-widest text-white/30 hover:text-white/60 transition ml-auto"
                     >
                       Restablecer
                     </button>
