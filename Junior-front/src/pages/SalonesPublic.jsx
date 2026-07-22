@@ -127,11 +127,12 @@ export default function SalonesPublic() {
   };
 
   const getSlotColor = (slot) => {
-    // Usar el colorOcupado del salón activo si existe
-    if (activeSalon?.colorOcupado) {
-      const c = activeSalon.colorOcupado;
+    // 1. Si el slot tiene un color individual asignado por el admin, usarlo
+    if (slot.color) {
+      const c = slot.color;
       return { bg: c + '30', border: c + '60', text: c };
     }
+    // 2. Fallback: color basado en hash de notas (misma lógica que SalonBooking)
     const key = slot.notas || slot._id || '';
     const idx = hashString(key) % SLOT_COLORS.length;
     return SLOT_COLORS[idx];

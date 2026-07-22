@@ -153,12 +153,14 @@ exports.createSlot = async (req, res) => {
 // PUT /api/salones/slots/:id — Editar slot (admin)
 exports.updateSlot = async (req, res) => {
   try {
-    const { horaInicio, horaFin, notas } = req.body;
+    const { horaInicio, horaFin, notas, color } = req.body;
+    const updateData = { horaInicio, horaFin, notas };
+    if (color !== undefined) updateData.color = color;
     const slot = await SalonSlot.findByIdAndUpdate(
       req.params.id,
-      { horaInicio, horaFin, notas },
+      updateData,
       { new: true }
-    ).populate('salon', 'nombre color');
+    ).populate('salon', 'nombre color colorOcupado');
 
     if (!slot) return res.status(404).json({ msg: 'Slot no encontrado' });
     res.json(slot);

@@ -241,6 +241,11 @@ export default function SalonBooking() {
   };
 
   const getSlotColor = (slot) => {
+    // Si el slot tiene un color individual asignado, usarlo
+    if (slot.color) {
+      const c = slot.color;
+      return { bg: c + '30', border: c + '60', text: c };
+    }
     if (slot.estado === 'reservado') return { bg: 'rgba(251,191,36,0.2)', border: 'rgba(251,191,36,0.4)', text: '#fbbf24' };
     // Para clases fijas (confirmado) usar color basado en las notas
     const key = slot.notas || slot._id || '';
@@ -261,6 +266,21 @@ export default function SalonBooking() {
 
   // Contar pendientes
   const pendientes = slots.filter(s => s.estado === 'reservado');
+
+  // Cambiar color de un slot individual
+  const handleUpdateSlotColor = async (id, newColor) => {
+    try {
+      const res = await fetch(`${API_URL}/api/salones/slots/${id}`, {
+        method: 'PUT', headers,
+        body: JSON.stringify({ color: newColor }),
+      });
+      if (res.ok) {
+        fetchSlots();
+        setSelectedSlot(prev => prev ? { ...prev, color: newColor } : null);
+        showToast('Color actualizado');
+      }
+    } catch (err) { showToast('Error al cambiar color', 'error'); }
+  };
 
   return (
     <div className="bg-[#1F1F1F] min-h-screen text-white font-sans">
@@ -723,6 +743,27 @@ export default function SalonBooking() {
                   )}
                 </div>
               )}
+
+              <div className="bg-black/40 border border-white/5 p-4 rounded-2xl">
+                <p className="text-[9px] uppercase tracking-widest text-white/40 font-black mb-2">Color del horario</p>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={selectedSlot.color || getSlotColor(selectedSlot).text}
+                    onChange={(e) => handleUpdateSlotColor(selectedSlot._id, e.target.value)}
+                    className="w-10 h-10 rounded-xl border border-white/10 cursor-pointer bg-transparent"
+                  />
+                  <div className="w-8 h-8 rounded-full border border-white/10" style={{ backgroundColor: selectedSlot.color || getSlotColor(selectedSlot).text }} />
+                  {selectedSlot.color && (
+                    <button
+                      onClick={() => handleUpdateSlotColor(selectedSlot._id, '')}
+                      className="text-[9px] font-black uppercase tracking-widest text-white/30 hover:text-white/60 transition"
+                    >
+                      Restablecer
+                    </button>
+                  )}
+                </div>
+              </div>
 
               <div className="flex flex-col gap-3 pt-2">
                 {selectedSlot.estado === 'reservado' && (

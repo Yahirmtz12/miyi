@@ -39,6 +39,10 @@ const salonSlotSchema = new mongoose.Schema({
   notas: {
     type: String,
     default: '',
+  },
+  color: {
+    type: String,
+    default: '',
   }
 }, { timestamps: true });
 
