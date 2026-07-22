@@ -421,7 +421,7 @@ export default function SalonBooking() {
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-bold text-white truncate">{slot.nombreReserva || slot.reservadoPor?.nombre || 'Sin nombre'}</p>
                     <p className="text-[9px] text-white/40 font-bold">
-                      {slot.salon?.nombre} • {new Date(slot.fecha).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })} • {slot.horaInicio}-{slot.horaFin}
+                      {slot.salon?.nombre} • {new Date(slot.fecha.split('T')[0] + 'T12:00:00').toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })} • {slot.horaInicio}-{slot.horaFin}
                     </p>
                   </div>
                   <div className="flex gap-1.5 shrink-0">
@@ -508,11 +508,11 @@ export default function SalonBooking() {
                                 }}
                               >
                                 <p className="text-[10px] font-black leading-tight truncate" style={{ color: color.text }}>
-                                  {slot.notas || getEstadoLabel(slot.estado)}
+                                  {slot.estado === 'reservado' ? 'Pendiente' : (slot.notas || slot.nombreReserva || 'Ocupado')}
                                 </p>
-                                {slot.nombreReserva && (
+                                {slot.estado === 'reservado' && (slot.nombreReserva || slot.notas) && (
                                   <p className="text-[8px] opacity-60 truncate mt-0.5" style={{ color: color.text }}>
-                                    {slot.nombreReserva}
+                                    {slot.nombreReserva || slot.notas}
                                   </p>
                                 )}
                                 <p className="text-[7px] opacity-40 mt-0.5" style={{ color: color.text }}>
@@ -705,7 +705,7 @@ export default function SalonBooking() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-black/40 border border-white/5 p-4 rounded-2xl">
                   <p className="text-[9px] uppercase tracking-widest text-white/40 font-black">Fecha</p>
-                  <p className="text-sm text-white font-bold">{new Date(selectedSlot.fecha).toLocaleDateString('es-MX', { day: '2-digit', month: 'long' })}</p>
+                  <p className="text-sm text-white font-bold">{new Date(selectedSlot.fecha.split('T')[0] + 'T12:00:00').toLocaleDateString('es-MX', { day: '2-digit', month: 'long' })}</p>
                 </div>
                 <div className="bg-black/40 border border-white/5 p-4 rounded-2xl">
                   <p className="text-[9px] uppercase tracking-widest text-white/40 font-black">Horario</p>

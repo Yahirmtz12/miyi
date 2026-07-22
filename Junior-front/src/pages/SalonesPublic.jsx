@@ -344,7 +344,7 @@ export default function SalonesPublic() {
                                 style={{ backgroundColor: color.bg, border: `1px solid ${color.border}` }}
                               >
                                 <p className="text-[9px] font-black leading-tight truncate flex items-center gap-1" style={{ color: color.text }}>
-                                  <FiAlertCircle className="w-3 h-3 shrink-0" /> {slot.notas || slot.nombreReserva || (slot.estado === 'reservado' ? 'Pendiente' : 'Ocupado')}
+                                  <FiAlertCircle className="w-3 h-3 shrink-0" /> {slot.estado === 'reservado' ? 'Pendiente' : (slot.notas || slot.nombreReserva || 'Ocupado')}
                                 </p>
                                 <p className="text-[7px] opacity-40 mt-0.5" style={{ color: color.text }}>
                                   {slot.horaInicio}–{slot.horaFin}
