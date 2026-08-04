@@ -220,7 +220,7 @@ export default function Login() {
           </div>
         </div>
 
-        <div className="rounded-[2.5rem] p-10 bg-[#161616]/80 backdrop-blur-3xl border border-white/5 shadow-[0_20px_50px_rgba(0,0,0,0.6)]">
+        <div className="rounded-[2.5rem] p-10 bg-[#161616] backdrop-blur-xl border border-white/5 shadow-[0_20px_50px_rgba(0,0,0,0.6)]">
 
           <div className="mb-10 text-center">
             <h1 className="text-3xl font-black text-white uppercase tracking-tighter italic leading-none">

@@ -105,7 +105,7 @@ export default function Register() {
           </div>
         </div>
 
-        <div className="rounded-[2.5rem] p-8 md:p-10 bg-[#161616]/80 backdrop-blur-3xl border border-white/5 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+        <div className="rounded-[2.5rem] p-8 md:p-10 bg-[#161616] backdrop-blur-xl border border-white/5 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
 
           <button
             onClick={() => navigate("/login")}
