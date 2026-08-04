@@ -175,6 +175,14 @@ export default function UserManagement() {
     window.open(`https://wa.me/${telefono}?text=${mensaje}`, '_blank');
   };
 
+  // --- HELPER: ¿El cliente está activo? ---
+  const isClienteActivo = (u) => {
+    if (u.rol !== "cliente") return false;
+    const tieneClases = u.clasesDisponibles > 0;
+    const fechaVigente = u.fechaVencimiento ? new Date(u.fechaVencimiento) >= new Date() : false;
+    return tieneClases && fechaVigente;
+  };
+
   // --- LÓGICA DE FILTRADO ---
   const displayedUsers = users.filter((u) => {
     // Filtro por texto (nombre o usuario)
@@ -187,9 +195,9 @@ export default function UserManagement() {
     // Filtro por estatus (solo aplica a clientes)
     let matchesStatus = true;
     if (statusFilter === "activo") {
-      matchesStatus = u.rol === "cliente" && u.clasesDisponibles > 0;
+      matchesStatus = isClienteActivo(u);
     } else if (statusFilter === "inactivo") {
-      matchesStatus = u.rol === "cliente" && (!u.clasesDisponibles || u.clasesDisponibles <= 0);
+      matchesStatus = u.rol === "cliente" && !isClienteActivo(u);
     }
 
     return matchesSearch && matchesRole && matchesStatus;
@@ -319,7 +327,7 @@ export default function UserManagement() {
                   const esCliente = u.rol === 'cliente';
                   const esYoMismo = u.usuario === currentUser.usuario;
                   const puedeActualizarRol = !esCliente && !esYoMismo;
-                  const tieneClases = u.clasesDisponibles > 0;
+                  const clienteActivo = isClienteActivo(u);
 
                   return (
                     <tr key={u._id} className="hover:bg-white/5 transition-colors group">
@@ -347,9 +355,9 @@ export default function UserManagement() {
                       <td className="px-8 py-5 text-center">
                         {esCliente ? (
                           <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase border tracking-widest ${
-                            tieneClases ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'
+                            clienteActivo ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'
                           }`}>
-                            {tieneClases ? 'Activo' : 'Inactivo'}
+                            {clienteActivo ? 'Activo' : 'Inactivo'}
                           </span>
                         ) : (
                           <span className="text-white/20 font-black">—</span>
@@ -423,7 +431,7 @@ export default function UserManagement() {
               const esCliente = u.rol === 'cliente';
               const esYoMismo = u.usuario === currentUser.usuario;
               const puedeActualizarRol = !esCliente && !esYoMismo;
-              const tieneClases = u.clasesDisponibles > 0;
+              const clienteActivo = isClienteActivo(u);
 
               return (
                 <div key={u._id} className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-[2rem] p-5 flex items-center justify-between shadow-xl">
@@ -446,9 +454,9 @@ export default function UserManagement() {
                         
                         {esCliente && (
                           <span className={`w-fit px-2 py-0.5 rounded text-[8px] font-black uppercase border tracking-widest ${
-                            tieneClases ? 'text-green-400 border-green-500/20 bg-green-500/10' : 'text-red-400 border-red-500/20 bg-red-500/10'
+                            clienteActivo ? 'text-green-400 border-green-500/20 bg-green-500/10' : 'text-red-400 border-red-500/20 bg-red-500/10'
                           }`}>
-                            {tieneClases ? 'Activo' : 'Inactivo'}
+                            {clienteActivo ? 'Activo' : 'Inactivo'}
                           </span>
                         )}
                       </div>

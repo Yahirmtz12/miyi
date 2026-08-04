@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useLocation } from "react-router-dom";
 import { FiCheckCircle, FiAlertCircle, FiActivity, FiX } from "react-icons/fi";
 import { API_URL } from "../api";
 
@@ -13,6 +14,8 @@ import { API_URL } from "../api";
  * Diferenciamos del teclado humano porque la pistola envía chars en <100ms.
  */
 export default function AttendanceListener() {
+  const location = useLocation();
+  const isKioskoPage = location.pathname === "/dashboard/kiosko";
   const [toast, setToast] = useState(null); // { type: 'success'|'error'|'denied', name, message, clasesRestantes }
   const scannerBuffer = useRef("");
   const scannerTimeout = useRef(null);
@@ -113,7 +116,7 @@ export default function AttendanceListener() {
 
       if (e.key === "Enter") {
         const scanned = scannerBuffer.current.trim().toUpperCase();
-        if (scanned.length >= 5) {
+        if (scanned.length >= 5 && !isKioskoPage) {
           processScannedId(scanned);
         }
         scannerBuffer.current = "";
@@ -137,7 +140,7 @@ export default function AttendanceListener() {
       clearTimeout(scannerTimeout.current);
       clearTimeout(toastTimeoutRef.current);
     };
-  }, [processScannedId]);
+  }, [processScannedId, isKioskoPage]);
 
   if (!toast) return null;
 
