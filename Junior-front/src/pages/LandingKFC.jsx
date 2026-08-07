@@ -41,7 +41,7 @@ export default function RhythmOaxacaPage() {
       {/* NAVBAR - Glassmorphism Premium */}
       <nav className="fixed top-0 w-full z-50 flex justify-between items-center px-6 py-4 bg-neutral-950/50 backdrop-blur-2xl border-b border-white/10">
         <div className="flex items-center gap-4">
-          <div className="h-16 w-16 md:h-13 md:w-13 rounded-full overflow-hidden bg-[#C5A473] flex items-center justify-center shadow-[0_0_20px_rgba(197,164,115,0.3)]">
+          <div className="h-16 w-16 md:h-13 md:w-13 rounded-full overflow-hidden bg-white flex items-center justify-center shadow-[0_0_20px_rgba(197,164,115,0.3)]">
             <img
               src={LOGO}
               alt="Logo Rhythm Oaxaca"
