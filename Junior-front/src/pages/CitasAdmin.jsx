@@ -261,8 +261,9 @@ export default function CitasAdmin() {
       {/* HEADER */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tighter text-white">
-            <FiScissors className="inline text-[#C5A473] mr-2" /> Panel de Citas
+          <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tighter text-white flex items-center">
+            <img src="/logo.png" alt="Xolos" className="w-8 h-8 object-contain mr-3 bg-black/50 rounded-full border border-[#C5A473]/30" /> 
+            Panel de Citas
           </h1>
           <p className="text-white/30 text-xs mt-1 font-bold uppercase tracking-widest">Xolos Barbershop</p>
         </div>

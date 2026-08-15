@@ -49,8 +49,8 @@ export default function DashboardLayout() {
         <div className="shrink-0 transition-all duration-300">
           <div className="flex items-center justify-between px-4 py-6">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-[#C5A473] flex items-center justify-center shrink-0 border border-[#C5A473]/30 overflow-hidden">
-                <FiScissors className="text-white text-lg" />
+              <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 border border-[#C5A473]/30 overflow-hidden bg-black/50">
+                <img src="/logo.png" alt="Xolos" className="w-full h-full object-cover" />
               </div>
 
               <div className={`flex flex-col transition-opacity duration-300 ${(sidebarOpen || hovered) ? "opacity-100" : "lg:opacity-0 pointer-events-none"}`}>
@@ -119,8 +119,8 @@ export default function DashboardLayout() {
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <header className="flex items-center justify-between px-6 py-4 bg-[#1F1F1F] lg:hidden border-b border-white/5">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-[#C5A473] flex items-center justify-center">
-              <FiScissors className="text-white text-sm" />
+            <div className="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden border border-[#C5A473]/30 bg-black/50">
+              <img src="/logo.png" alt="Xolos" className="w-full h-full object-cover" />
             </div>
             <span className="text-white font-black uppercase text-xs">Xolos Barber</span>
           </div>
