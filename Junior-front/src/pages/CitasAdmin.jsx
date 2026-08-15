@@ -173,6 +173,17 @@ export default function CitasAdmin() {
     } catch (err) { console.error('Error'); }
   };
 
+  const handleNoAsistio = async (citaId) => {
+    if(!window.confirm('¿Seguro que quieres marcar esta cita como "No Asistió"? (Se cancelará)')) return;
+    try {
+      await fetch(`${API_URL}/api/citas/${citaId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      fetchCitasSemana();
+    } catch (err) { console.error('Error'); }
+  };
+
   // --- CONFIG: Guardar barbero ---
   const handleSaveBarbero = async () => {
     try {
@@ -440,9 +451,14 @@ export default function CitasAdmin() {
                             <div className="flex items-center gap-2 shrink-0">
                               <span className={`text-[8px] font-black uppercase tracking-widest ${estado.text}`}>{cita.estado}</span>
                               {cita.estado === 'confirmada' && (
-                                <button onClick={() => handleCompletar(cita._id)} className="p-1.5 bg-blue-500/10 border border-blue-500/20 rounded-lg hover:bg-blue-500/20 transition" title="Marcar completada">
-                                  <FiCheckCircle className="w-3.5 h-3.5 text-blue-400" />
-                                </button>
+                                <div className="flex gap-1">
+                                  <button onClick={() => handleCompletar(cita._id)} className="p-1.5 bg-blue-500/10 border border-blue-500/20 rounded-lg hover:bg-blue-500/20 transition" title="Marcar completada (Registrar Venta)">
+                                    <FiCheckCircle className="w-3.5 h-3.5 text-blue-400" />
+                                  </button>
+                                  <button onClick={() => handleNoAsistio(cita._id)} className="p-1.5 bg-gray-500/10 border border-gray-500/20 rounded-lg hover:bg-gray-500/20 transition" title="No asistió (Cancelar sin venta)">
+                                    <FiX className="w-3.5 h-3.5 text-gray-400" />
+                                  </button>
+                                </div>
                               )}
                             </div>
                           </div>

@@ -207,10 +207,35 @@ exports.completarCita = async (req, res) => {
     const cita = await Cita.findById(req.params.id);
     if (!cita) return res.status(404).json({ msg: 'Cita no encontrada' });
 
+    if (cita.estado === 'completada') {
+      return res.status(400).json({ msg: 'La cita ya fue completada' });
+    }
+
     cita.estado = 'completada';
     await cita.save();
 
-    res.json({ msg: 'Cita completada', _id: cita._id });
+    // 💰 REGISTRAR LA VENTA AUTOMÁTICAMENTE
+    const Sale = require('../models/Sale');
+    
+    const nuevaVenta = new Sale({
+      productos: [{
+        citaId: cita._id,
+        nombre: `Corte: ${cita.servicio}`,
+        cantidad: 1,
+        precio: cita.precioTotal, // The total includes extras, we can just put it all as precio
+        extras: cita.extras.map(e => ({ nombre: e.nombre, precio: e.precio })),
+        subtotal: cita.precioTotal
+      }],
+      total: cita.precioTotal,
+      efectivoRecibido: cita.precioTotal, // Default assumption, full payment
+      cambio: 0,
+      usuario: req.user ? req.user.id : null, // Admin who clicked complete
+      fecha: new Date()
+    });
+
+    await nuevaVenta.save();
+
+    res.json({ msg: 'Cita completada y venta registrada exitosamente', _id: cita._id });
   } catch (error) {
     res.status(500).json({ msg: 'Error al completar cita', error: error.message });
   }

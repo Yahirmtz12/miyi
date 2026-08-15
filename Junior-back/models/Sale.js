@@ -6,7 +6,12 @@ const saleSchema = new mongoose.Schema({
       productoId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Product',
-        required: true
+        required: false
+      },
+      citaId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Cita',
+        required: false
       },
       nombre: String,
       cantidad: Number,

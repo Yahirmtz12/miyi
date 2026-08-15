@@ -8,9 +8,6 @@ import LandingXolos from './pages/LandingKFC';
 import AgendarCita from './pages/AgendarCita';
 import CitasAdmin from './pages/CitasAdmin';
 import UserManagement from "./pages/UserManagement";
-import Inventory from "./pages/Inventory";
-import Sales from "./pages/Sales";
-import ExpensesView from "./pages/ExpensesView";
 import Reports from "./pages/Reports";
 
 export default function App() {
@@ -66,20 +63,7 @@ export default function App() {
             element={isAdmin ? <UserManagement /> : <Navigate to={getHomePath()} replace />} 
           />
 
-          <Route 
-            path="inventario" 
-            element={isAdmin ? <Inventory /> : <Navigate to={getHomePath()} replace />} 
-          />
 
-          <Route 
-            path="ventas" 
-            element={isAdmin ? <Sales /> : <Navigate to={getHomePath()} replace />} 
-          />
-
-          <Route 
-            path="gastos" 
-            element={isAdmin ? <ExpensesView /> : <Navigate to={getHomePath()} replace />} 
-          />
 
           <Route 
             path="reportes" 

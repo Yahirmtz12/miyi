@@ -15,10 +15,7 @@ export default function DashboardLayout() {
 
   const allNavItems = [
     { to: "/dashboard/citas", label: "Citas", icon: "calendar_month", roles: ['admin'] },
-    { to: "/dashboard/ventas", label: "Ventas", icon: "point_of_sale", roles: ['admin'] },
-    { to: "/dashboard/inventario", label: "Inventario", icon: "inventory_2", roles: ['admin'] },
-    { to: "/dashboard/gastos", label: "Gastos", icon: "payments", roles: ['admin'] },
-    { to: "/dashboard/reportes", label: "Reportes", icon: "monitoring", roles: ['admin'] },
+    { to: "/dashboard/reportes", label: "Análisis", icon: "monitoring", roles: ['admin'] },
     { to: "/dashboard/users", label: "Usuarios", icon: "group", roles: ['admin'] },
   ];
 
