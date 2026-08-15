@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const auth = require('../middleware/auth');
+const auth = require('../middleware/auth.middleware');
 const PushSubscription = require('../models/PushSubscription');
 const vapidKeys = require('../config/vapid');
 
