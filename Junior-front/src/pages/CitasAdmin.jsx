@@ -3,7 +3,7 @@ import {
   FiCalendar, FiCheck, FiX, FiClock, FiLoader,
   FiUser, FiPhone, FiChevronLeft, FiChevronRight,
   FiScissors, FiBell, FiCheckCircle, FiAlertCircle,
-  FiSettings, FiPlus, FiTrash2, FiEdit3, FiSave
+  FiSettings, FiPlus, FiTrash2, FiEdit3, FiSave, FiRefreshCw
 } from "react-icons/fi";
 import { FaWhatsapp } from "react-icons/fa";
 import { API_URL } from "../api";
@@ -61,8 +61,9 @@ export default function CitasAdmin() {
         msg: `💈 Nueva cita de ${data.nombreCliente} — ${data.servicio} a las ${formatHour(data.horaInicio)}`,
         data
       });
-      // Refrescar pendientes
+      // Refrescar pendientes y calendario
       fetchPendientes();
+      fetchCitasSemana();
 
       // Auto-ocultar notificación después de 10s
       setTimeout(() => setNotification(null), 10000);
@@ -268,8 +269,16 @@ export default function CitasAdmin() {
           <p className="text-white/30 text-xs mt-1 font-bold uppercase tracking-widest">Xolos Barbershop</p>
         </div>
         <div className="flex items-center gap-2">
+          <button 
+            onClick={() => { fetchPendientes(); fetchCitasSemana(); }} 
+            className="p-2 bg-white/5 border border-white/10 rounded-xl text-white/60 hover:text-white hover:bg-white/10 transition flex items-center justify-center"
+            title="Refrescar Citas"
+          >
+            <FiRefreshCw className="w-4 h-4" />
+          </button>
+          
           {citasPendientes.length > 0 && (
-            <div className="bg-amber-500/10 border border-amber-500/20 px-3 py-1.5 rounded-full flex items-center gap-2">
+            <div className="bg-amber-500/10 border border-amber-500/20 px-3 py-1.5 rounded-xl flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
               <span className="text-amber-400 text-xs font-black">{citasPendientes.length} pendientes</span>
             </div>
