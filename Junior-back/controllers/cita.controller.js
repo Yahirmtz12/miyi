@@ -280,16 +280,13 @@ exports.completarCita = async (req, res) => {
   }
 };
 
-// DELETE /api/citas/:id — Cancelar cita
+// DELETE /api/citas/:id — Cancelar cita (Elimina de la BD)
 exports.cancelarCita = async (req, res) => {
   try {
-    const cita = await Cita.findById(req.params.id);
+    const cita = await Cita.findByIdAndDelete(req.params.id);
     if (!cita) return res.status(404).json({ msg: 'Cita no encontrada' });
 
-    cita.estado = 'cancelada';
-    await cita.save();
-
-    res.json({ msg: 'Cita cancelada', _id: cita._id });
+    res.json({ msg: 'Cita eliminada de la base de datos', _id: cita._id });
   } catch (error) {
     res.status(500).json({ msg: 'Error al cancelar cita', error: error.message });
   }

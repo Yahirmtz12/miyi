@@ -29,47 +29,57 @@ export default function DashboardLayout() {
     return <Navigate to="/mis-citas" replace />;
   }
 
+  const [notificationStatus, setNotificationStatus] = useState('default');
+
+  useEffect(() => {
+    if ('Notification' in window) {
+      setNotificationStatus(Notification.permission);
+    }
+  }, []);
+
+  const subscribeUser = async () => {
+    try {
+      const swReg = await navigator.serviceWorker.register('/sw.js');
+      let subscription = await swReg.pushManager.getSubscription();
+      if (!subscription) {
+        const res = await fetch(`${API_URL}/api/push/vapidPublicKey`);
+        const { publicKey } = await res.json();
+        
+        subscription = await swReg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(publicKey)
+        });
+        
+        await fetch(`${API_URL}/api/push/subscribe`, {
+          method: 'POST',
+          body: JSON.stringify(subscription),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        console.log('Suscrito a notificaciones Push');
+      }
+    } catch (error) {
+      console.error('Push Setup Error:', error);
+    }
+  };
+
+  const handleEnablePush = () => {
+    if ('Notification' in window) {
+      Notification.requestPermission().then(perm => {
+        setNotificationStatus(perm);
+        if (perm === 'granted') subscribeUser();
+      });
+    }
+  };
+
   // --- WEB PUSH SETUP ---
   useEffect(() => {
-    if (rol === 'admin' && 'serviceWorker' in navigator && 'PushManager' in window) {
-      const subscribeUser = async () => {
-        try {
-          const swReg = await navigator.serviceWorker.register('/sw.js');
-          
-          let subscription = await swReg.pushManager.getSubscription();
-          if (!subscription) {
-            const res = await fetch(`${API_URL}/api/push/vapidPublicKey`);
-            const { publicKey } = await res.json();
-            
-            subscription = await swReg.pushManager.subscribe({
-              userVisibleOnly: true,
-              applicationServerKey: urlBase64ToUint8Array(publicKey)
-            });
-            
-            await fetch(`${API_URL}/api/push/subscribe`, {
-              method: 'POST',
-              body: JSON.stringify(subscription),
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-              }
-            });
-            console.log('Suscrito a notificaciones Push');
-          }
-        } catch (error) {
-          console.error('Push Setup Error:', error);
-        }
-      };
-      
-      if (Notification.permission === 'default') {
-        Notification.requestPermission().then(perm => {
-          if (perm === 'granted') subscribeUser();
-        });
-      } else if (Notification.permission === 'granted') {
-        subscribeUser();
-      }
+    if (rol === 'admin' && 'serviceWorker' in navigator && 'PushManager' in window && notificationStatus === 'granted') {
+      subscribeUser();
     }
-  }, [rol]);
+  }, [rol, notificationStatus]);
 
   const allNavItems = [
     { to: "/dashboard/citas", label: "Citas", icon: "calendar_month", roles: ['admin'] },
@@ -147,6 +157,18 @@ export default function DashboardLayout() {
             </NavLink>
           ))}
         </nav>
+
+        {/* BOTON NOTIFICACIONES */}
+        {rol === 'admin' && notificationStatus !== 'granted' && (
+          <div className="px-4 mb-4">
+            <button
+              onClick={handleEnablePush}
+              className="w-full py-2 bg-blue-500/10 border border-blue-500/20 text-blue-400 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-blue-500/20 transition animate-pulse"
+            >
+              🔔 Activar Alertas
+            </button>
+          </div>
+        )}
 
         {/* LOGOUT */}
         <div className="p-4 shrink-0 border-t border-white/5 bg-[#262626]">
