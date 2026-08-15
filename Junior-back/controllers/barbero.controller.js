@@ -116,14 +116,20 @@ exports.getDisponibilidad = async (req, res) => {
       );
     });
 
-    // Filtrar slots pasados si la fecha es hoy
-    const ahora = new Date();
-    const esHoy = fechaObj.toDateString() === ahora.toDateString();
+    // Filtrar slots pasados si la fecha es hoy (Ajustado a hora de México)
+    const ahoraMx = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Mexico_City"}));
+    
+    const mxYear = ahoraMx.getFullYear().toString();
+    const mxMonth = (ahoraMx.getMonth() + 1).toString().padStart(2, '0');
+    const mxDay = ahoraMx.getDate().toString().padStart(2, '0');
+    const fechaMxString = `${mxYear}-${mxMonth}-${mxDay}`;
+    
+    const esHoy = fecha === fechaMxString;
     
     const slotsFinal = esHoy 
       ? slotsDisponibles.filter(slot => {
           const horaSlot = parseInt(slot.horaInicio.split(':')[0]);
-          return horaSlot > ahora.getHours();
+          return horaSlot > ahoraMx.getHours();
         })
       : slotsDisponibles;
 
@@ -199,14 +205,19 @@ exports.getDisponibilidadSemana = async (req, res) => {
           return !citasDelDia.some(cita => cita.horaInicio === slot.horaInicio);
         });
 
-        // Filtrar pasados si es hoy
-        const ahora = new Date();
-        const esHoy = currentDate.toDateString() === ahora.toDateString();
+        // Filtrar pasados si es hoy (Ajustado a hora de México)
+        const ahoraMx = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Mexico_City"}));
+        const mxYear = ahoraMx.getFullYear().toString();
+        const mxMonth = (ahoraMx.getMonth() + 1).toString().padStart(2, '0');
+        const mxDay = ahoraMx.getDate().toString().padStart(2, '0');
+        const fechaMxString = `${mxYear}-${mxMonth}-${mxDay}`;
+        
+        const esHoy = dateStr === fechaMxString;
         
         resultado[dateStr] = {
           disponible: true,
           slots: esHoy 
-            ? slotsDisponibles.filter(s => parseInt(s.horaInicio) > ahora.getHours())
+            ? slotsDisponibles.filter(s => parseInt(s.horaInicio) > ahoraMx.getHours())
             : slotsDisponibles,
           totalSlots: todosLosSlots.length,
           ocupados: citasDelDia.length,
