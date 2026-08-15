@@ -216,6 +216,17 @@ export default function CitasAdmin() {
     setShowBarberoModal(true);
   };
 
+  const handleDeleteBarbero = async (barberoId) => {
+    if(!window.confirm('¿Seguro que deseas eliminar este barbero? (Se desactivará)')) return;
+    try {
+      await fetch(`${API_URL}/api/barberos/${barberoId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      fetchBarberos();
+    } catch (err) { console.error('Error al eliminar barbero'); }
+  };
+
   const openNewBarbero = () => {
     setEditingBarbero(null);
     setBarberoForm({
@@ -508,9 +519,14 @@ export default function CitasAdmin() {
                     <p className="text-white/30 text-xs">{barbero.telefono}</p>
                   </div>
                 </div>
-                <button onClick={() => openEditBarbero(barbero)} className="p-2 bg-white/5 rounded-xl hover:bg-white/10 transition">
-                  <FiEdit3 className="w-4 h-4 text-white/40" />
-                </button>
+                <div className="flex gap-2">
+                  <button onClick={() => openEditBarbero(barbero)} className="p-2 bg-white/5 rounded-xl hover:bg-[#C5A473] hover:text-white transition">
+                    <FiEdit3 className="w-4 h-4 text-white/40 group-hover:text-white" />
+                  </button>
+                  <button onClick={() => handleDeleteBarbero(barbero._id)} className="p-2 bg-white/5 rounded-xl hover:bg-red-500 hover:text-white transition text-white/40">
+                    <FiTrash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
 
               {/* Servicios */}
