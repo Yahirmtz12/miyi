@@ -49,17 +49,18 @@ export default function DashboardLayout() {
           userVisibleOnly: true,
           applicationServerKey: urlBase64ToUint8Array(publicKey)
         });
-        
-        await fetch(`${API_URL}/api/push/subscribe`, {
-          method: 'POST',
-          body: JSON.stringify(subscription),
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        });
-        console.log('Suscrito a notificaciones Push');
       }
+
+      // Siempre enviamos la suscripción al backend para asegurar que Mongo la tenga
+      await fetch(`${API_URL}/api/push/subscribe`, {
+        method: 'POST',
+        body: JSON.stringify(subscription),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      console.log('Suscripción sincronizada con el servidor');
     } catch (error) {
       console.error('Push Setup Error:', error);
     }
