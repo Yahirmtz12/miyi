@@ -71,6 +71,45 @@ exports.solicitarCita = async (req, res) => {
       });
     }
 
+    // 🔔 Enviar Notificación Web Push a los administradores
+    const PushSubscription = require('../models/PushSubscription');
+    const User = require('../models/User');
+    const webpush = require('web-push');
+    const vapidKeys = require('../config/vapid');
+
+    webpush.setVapidDetails(
+      'mailto:contacto@xolosbarbershop.com',
+      vapidKeys.publicKey,
+      vapidKeys.privateKey
+    );
+
+    try {
+      const adminUsers = await User.find({ rol: 'admin' });
+      const adminIds = adminUsers.map(u => u._id);
+      
+      const subscriptions = await PushSubscription.find({ userId: { $in: adminIds } });
+      
+      const payload = JSON.stringify({
+        title: '¡Nueva Cita! 💈',
+        body: `${cita.nombreCliente} agendó: ${cita.servicio} a las ${cita.horaInicio}.`,
+        url: '/dashboard/citas'
+      });
+
+      const pushPromises = subscriptions.map(sub => 
+        webpush.sendNotification({ endpoint: sub.endpoint, keys: sub.keys }, payload)
+          .catch(async err => {
+            if (err.statusCode === 410 || err.statusCode === 404) {
+              await PushSubscription.findByIdAndDelete(sub._id);
+            } else {
+              console.error('Error enviando push:', err);
+            }
+          })
+      );
+      await Promise.all(pushPromises);
+    } catch (pushErr) {
+      console.error('Error al enviar notificaciones push:', pushErr);
+    }
+
     res.status(201).json({ msg: 'Cita solicitada exitosamente. Espera la confirmación del barbero.', cita: citaPopulada });
   } catch (error) {
     res.status(500).json({ msg: 'Error al solicitar cita', error: error.message });

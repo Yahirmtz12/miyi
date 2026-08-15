@@ -1,6 +1,22 @@
 import { Outlet, NavLink, Navigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FiMenu, FiLogOut, FiX, FiScissors } from "react-icons/fi";
+import { API_URL } from "../api";
+
+const urlBase64ToUint8Array = (base64String) => {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding)
+    .replace(/\-/g, '+')
+    .replace(/_/g, '/');
+
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+};
 
 export default function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -12,6 +28,48 @@ export default function DashboardLayout() {
   if (rol === 'cliente') {
     return <Navigate to="/mis-citas" replace />;
   }
+
+  // --- WEB PUSH SETUP ---
+  useEffect(() => {
+    if (rol === 'admin' && 'serviceWorker' in navigator && 'PushManager' in window) {
+      const subscribeUser = async () => {
+        try {
+          const swReg = await navigator.serviceWorker.register('/sw.js');
+          
+          let subscription = await swReg.pushManager.getSubscription();
+          if (!subscription) {
+            const res = await fetch(`${API_URL}/api/push/vapidPublicKey`);
+            const { publicKey } = await res.json();
+            
+            subscription = await swReg.pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: urlBase64ToUint8Array(publicKey)
+            });
+            
+            await fetch(`${API_URL}/api/push/subscribe`, {
+              method: 'POST',
+              body: JSON.stringify(subscription),
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+              }
+            });
+            console.log('Suscrito a notificaciones Push');
+          }
+        } catch (error) {
+          console.error('Push Setup Error:', error);
+        }
+      };
+      
+      if (Notification.permission === 'default') {
+        Notification.requestPermission().then(perm => {
+          if (perm === 'granted') subscribeUser();
+        });
+      } else if (Notification.permission === 'granted') {
+        subscribeUser();
+      }
+    }
+  }, [rol]);
 
   const allNavItems = [
     { to: "/dashboard/citas", label: "Citas", icon: "calendar_month", roles: ['admin'] },
