@@ -1,6 +1,6 @@
 import { Outlet, NavLink, Navigate } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { FiMenu, FiLogOut, FiX, FiScissors } from "react-icons/fi";
+import { FiMenu, FiLogOut, FiX, FiScissors, FiRefreshCw } from "react-icons/fi";
 import { API_URL } from "../api";
 
 const urlBase64ToUint8Array = (base64String) => {
@@ -205,12 +205,21 @@ export default function DashboardLayout() {
             </div>
             <span className="text-white font-black uppercase text-xs">Xolos Barber</span>
           </div>
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="p-2 bg-white/5 rounded-xl text-white"
-          >
-            <FiMenu size={24} />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => window.location.reload(true)}
+              className="p-2 bg-white/5 rounded-xl text-white/60 hover:text-white transition-colors"
+              title="Recargar Aplicación"
+            >
+              <FiRefreshCw size={20} />
+            </button>
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="p-2 bg-white/5 rounded-xl text-white"
+            >
+              <FiMenu size={24} />
+            </button>
+          </div>
         </header>
 
         <div className="flex-1 overflow-y-auto relative p-4 md:p-8">
