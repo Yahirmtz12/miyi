@@ -74,19 +74,19 @@ export default function LandingXolos() {
           </div>
         </div>
 
-        <div className="flex items-center gap-4 md:gap-8">
+        <div className="flex items-center gap-3 md:gap-8">
           <button
             onClick={irALogin}
-            className="text-sm font-semibold text-neutral-400 hover:text-white transition-colors uppercase tracking-widest hidden md:block"
+            className="text-[10px] md:text-sm font-bold text-neutral-400 hover:text-white transition-colors uppercase tracking-widest"
           >
             Login
           </button>
 
           <ShinyButton
             onClick={irAAgendar}
-            className="bg-[#C5A473] text-white px-6 py-2 rounded-full text-xs font-bold uppercase tracking-widest"
+            className="bg-[#C5A473] text-white px-4 md:px-6 py-2 rounded-full text-[10px] md:text-xs font-bold uppercase tracking-widest"
           >
-            Agendar Cita
+            Agendar
           </ShinyButton>
         </div>
       </nav>
