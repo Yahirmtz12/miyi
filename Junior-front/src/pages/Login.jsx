@@ -213,8 +213,8 @@ export default function Login() {
         {/* Contenedor del Logo con efecto Elevado y Zoom */}
         <div className="flex justify-center mb-10">
           <div className="relative p-[3px] bg-gradient-to-tr from-[#C5A473] to-[#8C6A3B] rounded-full shadow-[0_0_50px_rgba(197,164,115,0.3)] transform hover:scale-105 transition-transform duration-500">
-            <div className="bg-[#C5A473] rounded-full overflow-hidden flex items-center justify-center w-28 h-28 shadow-md">
-              <FiScissors className="text-white text-5xl" />
+            <div className="bg-black/50 rounded-full overflow-hidden flex items-center justify-center w-28 h-28 shadow-md border border-[#C5A473]/30">
+              <img src="/logo.png" alt="Xolos Logo" className="w-full h-full object-cover" />
             </div>
           </div>
         </div>
@@ -295,17 +295,7 @@ export default function Login() {
             </button>
           </form>
 
-          <div className="mt-8 pt-8 border-t border-white/5">
-            <p className="text-center text-white/20 text-[10px] font-black uppercase tracking-widest">
-              ¿Eres cliente nuevo?{" "}
-              <button
-                onClick={() => navigate("/register")}
-                className="text-[#C5A473] hover:text-[#8C6A3B] transition-colors underline underline-offset-4"
-              >
-                Regístrate aquí
-              </button>
-            </p>
-          </div>
+
 
           <div className="mt-10 flex justify-between items-center text-[8px] font-black text-white/10 uppercase tracking-[0.4em]">
             <span>V 1.2.0</span>

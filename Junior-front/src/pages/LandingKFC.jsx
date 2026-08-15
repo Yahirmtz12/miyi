@@ -66,8 +66,8 @@ export default function LandingXolos() {
       {/* NAVBAR */}
       <nav className="fixed top-0 w-full z-50 flex justify-between items-center px-6 py-4 bg-neutral-950/50 backdrop-blur-2xl border-b border-white/10">
         <div className="flex items-center gap-4">
-          <div className="h-12 w-12 rounded-full overflow-hidden bg-[#C5A473] flex items-center justify-center shadow-[0_0_20px_rgba(197,164,115,0.3)]">
-            <FiScissors className="text-white text-xl" />
+          <div className="h-12 w-12 rounded-full overflow-hidden flex items-center justify-center shadow-[0_0_20px_rgba(197,164,115,0.3)] bg-black/50 border border-[#C5A473]/30">
+            <img src="/logo.png" alt="Xolos Logo" className="w-full h-full object-cover" />
           </div>
           <div className="text-xl md:text-2xl font-black tracking-widest text-white uppercase">
             Xolos <span className="text-[#C5A473]">Barbershop</span>
@@ -307,8 +307,8 @@ export default function LandingXolos() {
 
       {/* FOOTER */}
       <footer className="py-12 text-center text-neutral-500 border-t border-white/10 bg-black flex flex-col items-center gap-6 relative z-10">
-        <div className="h-16 w-16 rounded-full overflow-hidden border border-white/20 bg-[#C5A473] flex items-center justify-center shadow-lg">
-          <FiScissors className="text-white text-2xl" />
+        <div className="h-16 w-16 rounded-full overflow-hidden border border-[#C5A473]/30 bg-black/50 flex items-center justify-center shadow-[0_0_20px_rgba(197,164,115,0.3)]">
+          <img src="/logo.png" alt="Xolos Logo" className="w-full h-full object-cover" />
         </div>
 
         <div className="flex flex-col gap-2">
