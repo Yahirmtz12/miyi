@@ -1,28 +1,26 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const http = require('http'); // Requerido para Socket.io
-const socketIo = require('socket.io'); // Requerido para tiempo real
+const http = require('http');
+const socketIo = require('socket.io');
 const connectDB = require('./config/db');
-const checkCloudinary = require('./config/cloudinaryCheck');
 
 const app = express();
-const server = http.createServer(app); // Creamos el servidor HTTP
+const server = http.createServer(app);
 
 // Configuración de Socket.io
 const io = socketIo(server, {
   cors: {
-    origin: "*", // En producción, cámbialo por tu URL de frontend
-    methods: ["GET", "POST", "PATCH", "DELETE"]
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"]
   }
 });
 
-// Guardamos la instancia de IO en el objeto app para usarlo en los controladores
+// Guardamos la instancia de IO en el objeto app
 app.set('socketio', io);
 
-// Conectar DB y Check Cloudinary
+// Conectar DB
 connectDB();
-checkCloudinary();
 
 // Middlewares
 app.use(cors());
@@ -31,44 +29,51 @@ app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 // --- IMPORTACIÓN DE RUTAS ---
 const authRoutes = require('./routes/auth.routes');
-// const saleRoutes = require('./routes/sale.routes'); // CAFETERÍA DESHABILITADA
-// const productRoutes = require('./routes/product.routes'); // CAFETERÍA DESHABILITADA
 const userRoutes = require('./routes/user.routes');
-// const expenseRoutes = require('./routes/expense.routes'); // CAFETERÍA DESHABILITADA
-const membershipRoutes = require('./routes/membership.routes');
-// const orderRoutes = require('./routes/order.routes'); // CAFETERÍA DESHABILITADA
-// const tableRoutes = require('./routes/table.routes'); // CAFETERÍA DESHABILITADA
-// const categoryRoutes = require('./routes/category.routes'); // CAFETERÍA DESHABILITADA
-const salonRoutes = require('./routes/salon.routes');
+const barberoRoutes = require('./routes/barbero.routes');
+const citaRoutes = require('./routes/cita.routes');
+const categoryRoutes = require('./routes/category.routes');
+const productRoutes = require('./routes/product.routes');
+const expenseRoutes = require('./routes/expense.routes');
+const saleRoutes = require('./routes/sale.routes');
 
 // --- REGISTRO DE RUTAS ---
-// app.use('/api/products', productRoutes); // CAFETERÍA DESHABILITADA
-// app.use('/api/sales', saleRoutes); // CAFETERÍA DESHABILITADA
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
-// app.use('/api/expenses', expenseRoutes); // CAFETERÍA DESHABILITADA
-app.use('/api/membership', membershipRoutes);
-// app.use('/api/orders', orderRoutes); // CAFETERÍA DESHABILITADA
-// app.use('/api/tables', tableRoutes); // CAFETERÍA DESHABILITADA
-// app.use('/api/categories', categoryRoutes); // CAFETERÍA DESHABILITADA
-app.use('/api/salones', salonRoutes);
+app.use('/api/barberos', barberoRoutes);
+app.use('/api/citas', citaRoutes);
+app.use('/api/categories', categoryRoutes);
+app.use('/api/products', productRoutes);
+app.use('/api/expenses', expenseRoutes);
+app.use('/api/sales', saleRoutes);
 
 // Ruta prueba
 app.get('/', (req, res) => {
-  res.send('API Rhythm funcionando con Sockets 🔥');
+  res.send('API Xolos Barbershop funcionando 💈🔥');
 });
 
-// Escuchar conexiones de Sockets (Opcional, para debug)
+// Socket.io — Conexiones
 io.on('connection', (socket) => {
-  console.log('Nuevo dispositivo conectado al sistema de cocina:', socket.id);
+  console.log('💈 Cliente conectado:', socket.id);
   
+  // El admin se une a su room
+  socket.on('join-admin', () => {
+    socket.join('admin');
+    console.log('Admin conectado al panel de citas');
+  });
+
+  // Clientes se unen a su room personal
+  socket.on('join-cliente', (userId) => {
+    socket.join(`cliente:${userId}`);
+    console.log(`Cliente ${userId} conectado`);
+  });
+
   socket.on('disconnect', () => {
-    console.log('Dispositivo desconectado');
+    console.log('Cliente desconectado');
   });
 });
 
-// USAR server.listen EN LUGAR DE app.listen PARA QUE SOCKETS FUNCIONE
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-  console.log(`🚀 Servidor y Sockets corriendo en el puerto ${PORT}`);
+  console.log(`💈 Xolos Barbershop API corriendo en el puerto ${PORT}`);
 });

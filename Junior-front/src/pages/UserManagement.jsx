@@ -1,17 +1,25 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import {
-  FiShield, FiUserPlus, FiRefreshCw, FiX, FiUser,
-  FiLock, FiEdit3, FiTrash2, FiAlertTriangle, FiEye, 
-  FiCalendar, FiActivity, FiSearch, FiFilter, FiMessageCircle, FiAlertCircle
+  FiUsers,
+  FiUserPlus,
+  FiSearch,
+  FiFilter,
+  FiTrash2,
+  FiShield,
+  FiUser,
+  FiAlertCircle,
+  FiMessageCircle,
+  FiLock,
+  FiX,
+  FiCheck
 } from "react-icons/fi";
 import { API_URL } from "../api";
 
-// SEGURIDAD: Define aquí el ID de usuario que NADIE debe ver ni editar
-const SUPER_ADMIN_USER = "admin_maestroyomg";
-
 export default function UserManagement() {
   const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [roleFilter, setRoleFilter] = useState("todos");
   const [errorMsg, setErrorMsg] = useState("");
 
   const [showRegisterModal, setShowRegisterModal] = useState(false);
@@ -19,84 +27,49 @@ export default function UserManagement() {
   const [userToDelete, setUserToDelete] = useState(null);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [userToEditPassword, setUserToEditPassword] = useState(null);
-  
-  const [showClientModal, setShowClientModal] = useState(false);
-  const [selectedClient, setSelectedClient] = useState(null);
-  
-  // --- NUEVOS ESTADOS PARA FILTROS ---
-  const [searchTerm, setSearchTerm] = useState("");
-  const [roleFilter, setRoleFilter] = useState("todos");
-  const [statusFilter, setStatusFilter] = useState("todos");
-
   const [newPassword, setNewPassword] = useState("");
   const [noPhoneToast, setNoPhoneToast] = useState("");
-  const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
 
   const [formData, setFormData] = useState({
     nombre: "",
     usuario: "",
     password: "",
-    rol: "cajero"
+    rol: "cliente"
   });
 
-  useEffect(() => { fetchUsers(); }, []);
+  const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
 
   const fetchUsers = async () => {
+    setLoading(true);
     const token = localStorage.getItem("token");
     try {
       const res = await fetch(`${API_URL}/api/users`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
-
-      if (Array.isArray(data)) {
-        const filteredUsers = data.filter(u => u.usuario !== SUPER_ADMIN_USER);
-        setUsers(filteredUsers);
-      }
-    } catch (err) { console.error("Error al obtener usuarios:", err); }
-  };
-
-  const handlePasswordChange = async (e) => {
-    e.preventDefault();
-    if (!newPassword || newPassword.length < 4) {
-      setErrorMsg("La contraseña debe tener al menos 4 caracteres");
-      return;
-    }
-
-    const token = localStorage.getItem("token");
-    try {
-      const res = await fetch(`${API_URL}/api/users/${userToEditPassword._id}/password`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ password: newPassword }),
-      });
-
-      if (res.ok) {
-        setShowPasswordModal(false);
-        setNewPassword("");
-        setUserToEditPassword(null);
-        alert("Contraseña actualizada con éxito");
-      } else {
-        const data = await res.json();
-        setErrorMsg(data.msg || "Error al actualizar");
-      }
+      if (res.ok) setUsers(data);
     } catch (err) {
-      setErrorMsg("Error de conexión");
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleRegister = async (e) => {
+  const handleRegisterUser = async (e) => {
     e.preventDefault();
-    setLoading(true);
     setErrorMsg("");
-    const token = localStorage.getItem("token");
+    setLoading(true);
 
     const normalizedData = {
       ...formData,
-      usuario: formData.usuario.trim().toLowerCase(),
-      nombre: formData.nombre.trim()
+      usuario: formData.usuario.toLowerCase().trim()
     };
 
+    const token = localStorage.getItem("token");
     try {
       const res = await fetch(`${API_URL}/api/users/register`, {
         method: "POST",
@@ -106,7 +79,7 @@ export default function UserManagement() {
       const data = await res.json();
       if (res.ok) {
         setShowRegisterModal(false);
-        setFormData({ nombre: "", usuario: "", password: "", rol: "cajero" });
+        setFormData({ nombre: "", usuario: "", password: "", rol: "cliente" });
         fetchUsers();
       } else {
         setErrorMsg(data.msg || "Error al registrar");
@@ -119,7 +92,7 @@ export default function UserManagement() {
   };
 
   const handleToggleRol = async (userId, currentRol) => {
-    const rolesEmpleado = ["admin", "cajero", "cocinero", "mesero", "kiosko"];
+    const rolesEmpleado = ["admin", "cliente"];
     const currentIndex = rolesEmpleado.indexOf(currentRol);
 
     if (currentIndex === -1) return;
@@ -169,44 +142,49 @@ export default function UserManagement() {
       return;
     }
     const mensaje = encodeURIComponent(
-      `¡Hola ${user.nombre}! 🎶 Continúa con nosotros en Rhythm. Recuerda renovar tu membresía mensual y sigue creciendo en este camino. ¡Te esperamos! 💪`
+      `¡Hola ${user.nombre}! 💈 Te escribimos de Xolos Barbershop. Estamos a tus órdenes para agendar tu próximo corte.`
     );
     const telefono = `52${user.telefono}`;
     window.open(`https://wa.me/${telefono}?text=${mensaje}`, '_blank');
   };
 
-  // --- HELPER: ¿El cliente está activo? ---
-  const isClienteActivo = (u) => {
-    if (u.rol !== "cliente") return false;
-    const tieneClases = u.clasesDisponibles > 0;
-    const fechaVigente = u.fechaVencimiento ? new Date(u.fechaVencimiento) >= new Date() : false;
-    return tieneClases && fechaVigente;
-  };
-
-  // --- LÓGICA DE FILTRADO ---
-  const displayedUsers = users.filter((u) => {
-    // Filtro por texto (nombre o usuario)
-    const matchesSearch = (u.nombre || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          (u.usuario || "").toLowerCase().includes(searchTerm.toLowerCase());
-    
-    // Filtro por rol
-    const matchesRole = roleFilter === "todos" || u.rol === roleFilter;
-
-    // Filtro por estatus (solo aplica a clientes)
-    let matchesStatus = true;
-    if (statusFilter === "activo") {
-      matchesStatus = isClienteActivo(u);
-    } else if (statusFilter === "inactivo") {
-      matchesStatus = u.rol === "cliente" && !isClienteActivo(u);
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    setErrorMsg("");
+    if (newPassword.length < 4) {
+      setErrorMsg("La contraseña debe tener al menos 4 caracteres");
+      return;
     }
 
-    return matchesSearch && matchesRole && matchesStatus;
+    const token = localStorage.getItem("token");
+    try {
+      const res = await fetch(`${API_URL}/api/users/${userToEditPassword._id}/password`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ password: newPassword }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setShowPasswordModal(false);
+        setNewPassword("");
+        setUserToEditPassword(null);
+      } else {
+        setErrorMsg(data.msg || "Error al actualizar la contraseña");
+      }
+    } catch (err) {
+      setErrorMsg("Error de conexión");
+    }
+  };
+
+  const displayedUsers = users.filter((u) => {
+    const matchesSearch = (u.nombre || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          (u.usuario || "").toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesRole = roleFilter === "todos" || u.rol === roleFilter;
+    return matchesSearch && matchesRole;
   });
 
   return (
     <div className="bg-[#1F1F1F] min-h-screen text-white font-sans">
-
-      {/* TOAST: USUARIO SIN TELÉFONO */}
       {noPhoneToast && (
         <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[200] animate-in slide-in-from-top-3 duration-300">
           <div className="bg-red-500/10 border border-red-500/20 backdrop-blur-xl text-red-400 px-6 py-4 rounded-2xl flex items-center gap-3 shadow-2xl max-w-sm">
@@ -215,14 +193,15 @@ export default function UserManagement() {
           </div>
         </div>
       )}
+      
       <header className="p-4 md:p-8 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-6 shrink-0">
         <div className="flex items-center gap-3 md:gap-4">
-          <div className="p-2 md:p-3 bg-primary/20 rounded-2xl border border-primary/20 shrink-0">
-            <FiShield className="text-secondary w-6 h-6 md:w-8 md:h-8" />
+          <div className="p-2 md:p-3 bg-[#C5A473]/20 rounded-2xl border border-[#C5A473]/20 shrink-0">
+            <FiShield className="text-[#C5A473] w-6 h-6 md:w-8 md:h-8" />
           </div>
           <div>
             <h1 className="text-xl md:text-3xl font-black uppercase tracking-tight">Usuarios</h1>
-            <p className="text-white/40 text-[10px] md:text-sm italic">Rhythm - Oaxaca</p>
+            <p className="text-white/40 text-[10px] md:text-sm italic">Xolos Barbershop - Oaxaca</p>
           </div>
         </div>
 
@@ -231,7 +210,7 @@ export default function UserManagement() {
             setErrorMsg("");
             setShowRegisterModal(true);
           }}
-          className="flex items-center justify-center gap-2 bg-primary hover:bg-[#00205B] text-white font-black py-4 px-6 rounded-2xl transition-all shadow-xl shadow-primary/20 active:scale-95 uppercase text-xs tracking-widest"
+          className="flex items-center justify-center gap-2 bg-[#C5A473] hover:bg-[#8C6A3B] text-white font-black py-4 px-6 rounded-2xl transition-all shadow-xl active:scale-95 uppercase text-xs tracking-widest"
         >
           <FiUserPlus className="w-5 h-5" />
           Nuevo Usuario
@@ -239,22 +218,7 @@ export default function UserManagement() {
       </header>
 
       <main className="p-4 md:p-8 space-y-6 max-w-6xl mx-auto">
-        
-        {/* TÍTULO Y CONTADOR DE USUARIOS */}
-        <div className="flex items-center justify-between px-2">
-          <div className="flex items-center gap-3">
-            <FiUser className="text-secondary w-5 h-5" />
-            <h2 className="text-xs font-black uppercase tracking-[0.2em] text-white/40 italic">Plantilla de Usuarios</h2>
-          </div>
-          <span className="bg-white/10 text-white/60 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-white/10">
-            {displayedUsers.length} {displayedUsers.length === 1 ? 'Usuario' : 'Usuarios'} en Total
-          </span>
-        </div>
-
-        {/* BARRA DE FILTROS */}
         <div className="flex flex-col md:flex-row gap-4 bg-black/20 p-4 rounded-3xl border border-white/5">
-          
-          {/* Buscador de texto */}
           <div className="relative flex-1">
             <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" />
             <input
@@ -262,454 +226,185 @@ export default function UserManagement() {
               placeholder="BUSCAR NOMBRE O USUARIO..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-black/40 border border-white/10 rounded-2xl py-3 pl-12 pr-4 text-white focus:border-primary outline-none text-xs font-bold uppercase transition-all placeholder:text-white/20 tracking-widest"
+              className="w-full bg-black/40 border border-white/10 rounded-2xl py-3 pl-12 pr-4 text-white focus:border-[#C5A473] outline-none text-xs font-bold uppercase transition-all placeholder:text-white/20 tracking-widest"
             />
           </div>
 
-          {/* Filtros Selects */}
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="relative">
               <FiFilter className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 pointer-events-none" />
               <select
                 value={roleFilter}
-                onChange={(e) => {
-                  setRoleFilter(e.target.value);
-                  if (e.target.value !== "cliente" && e.target.value !== "todos") setStatusFilter("todos");
-                }}
-                className="w-full sm:w-48 bg-black/40 border border-white/10 rounded-2xl py-3 pl-12 pr-8 text-white focus:border-primary outline-none text-xs font-bold uppercase transition-all cursor-pointer appearance-none tracking-widest"
+                onChange={(e) => setRoleFilter(e.target.value)}
+                className="w-full sm:w-48 bg-black/40 border border-white/10 rounded-2xl py-3 pl-12 pr-8 text-white focus:border-[#C5A473] outline-none text-xs font-bold uppercase transition-all cursor-pointer appearance-none tracking-widest"
               >
                 <option value="todos">Todos los roles</option>
                 <option value="admin">Administradores</option>
-                <option value="cajero">Cajeros</option>
                 <option value="cliente">Clientes</option>
-                <option value="cocinero">Cocineros</option>
-                <option value="mesero">Meseros</option>
-                <option value="kiosko">Kioskos</option>
-              </select>
-            </div>
-
-            <div className="relative">
-              <FiActivity className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 pointer-events-none" />
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                disabled={roleFilter !== "todos" && roleFilter !== "cliente"}
-                className="w-full sm:w-48 bg-black/40 border border-white/10 rounded-2xl py-3 pl-12 pr-8 text-white focus:border-primary outline-none text-xs font-bold uppercase transition-all cursor-pointer appearance-none tracking-widest disabled:opacity-30"
-              >
-                <option value="todos">Cualquier estatus</option>
-                <option value="activo">Clientes Activos</option>
-                <option value="inactivo">Clientes Inactivos</option>
               </select>
             </div>
           </div>
         </div>
 
-        {/* TABLA PC */}
-        <div className="hidden md:block bg-black/40 backdrop-blur-xl rounded-[2.5rem] border border-white/10 shadow-2xl overflow-hidden">
-          <table className="w-full text-left">
-            <thead className="bg-white/5 border-b border-white/10">
-              <tr>
-                <th className="px-8 py-5 text-[10px] font-black text-white/40 uppercase tracking-widest">Nombre / Usuario</th>
-                <th className="px-8 py-5 text-[10px] font-black text-white/40 uppercase text-center tracking-widest">Rol</th>
-                <th className="px-8 py-5 text-[10px] font-black text-white/40 uppercase text-center tracking-widest">Estatus</th>
-                <th className="px-8 py-5 text-[10px] font-black text-white/40 uppercase text-center tracking-widest">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/5">
-              {displayedUsers.length === 0 ? (
+        <div className="bg-black/40 backdrop-blur-xl rounded-[2.5rem] border border-white/10 shadow-2xl overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left min-w-[800px]">
+              <thead className="bg-white/5 border-b border-white/10">
                 <tr>
-                  <td colSpan="4" className="px-8 py-12 text-center text-white/30 text-xs font-black uppercase tracking-widest">
-                    No se encontraron usuarios
-                  </td>
+                  <th className="px-8 py-5 text-[10px] font-black text-white/40 uppercase tracking-widest">Nombre / Usuario</th>
+                  <th className="px-8 py-5 text-[10px] font-black text-white/40 uppercase text-center tracking-widest">Teléfono</th>
+                  <th className="px-8 py-5 text-[10px] font-black text-white/40 uppercase text-center tracking-widest">Rol</th>
+                  <th className="px-8 py-5 text-[10px] font-black text-white/40 uppercase text-center tracking-widest">Acciones</th>
                 </tr>
-              ) : (
-                displayedUsers.map((u) => {
-                  const esCliente = u.rol === 'cliente';
-                  const esYoMismo = u.usuario === currentUser.usuario;
-                  const puedeActualizarRol = !esCliente && !esYoMismo;
-                  const clienteActivo = isClienteActivo(u);
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {displayedUsers.length === 0 ? (
+                  <tr>
+                    <td colSpan="4" className="px-8 py-12 text-center text-white/30 text-xs font-black uppercase tracking-widest">
+                      No se encontraron usuarios
+                    </td>
+                  </tr>
+                ) : (
+                  displayedUsers.map((u) => {
+                    const esCliente = u.rol === 'cliente';
+                    const esYoMismo = u.usuario === currentUser.usuario;
+                    const puedeActualizarRol = !esYoMismo;
 
-                  return (
-                    <tr key={u._id} className="hover:bg-white/5 transition-colors group">
-                      <td className="px-8 py-5 flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-gray-700 to-gray-800 flex items-center justify-center text-secondary font-bold border border-white/10 shadow-inner">
-                          {(u.nombre || u.usuario).charAt(0).toUpperCase()}
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="text-white font-bold tracking-wide italic">{u.nombre || "Sin Nombre"}</span>
-                          <span className="text-white/30 text-xs font-mono">@{u.usuario}</span>
-                        </div>
-                      </td>
-                      <td className="px-8 py-5 text-center">
-                        <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase border tracking-widest ${u.rol === 'admin' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
-                          u.rol === 'cajero' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
-                            u.rol === 'cliente' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' :
-                              u.rol === 'cocinero' ? 'bg-orange-500/10 text-orange-400 border-orange-500/20' :
-                                u.rol === 'mesero' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
-                                  u.rol === 'kiosko' ? 'bg-red-500/10 text-green-400 border-green-500/20' :
-                                    'bg-gray-500/10 text-gray-400 border-gray-500/20'
-                          }`}>
-                          {u.rol}
-                        </span>
-                      </td>
-                      <td className="px-8 py-5 text-center">
-                        {esCliente ? (
+                    return (
+                      <tr key={u._id} className="hover:bg-white/5 transition-colors group">
+                        <td className="px-8 py-5 flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-gray-700 to-gray-800 flex items-center justify-center text-[#C5A473] font-bold border border-white/10 shadow-inner">
+                            {(u.nombre || u.usuario).charAt(0).toUpperCase()}
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-white font-bold tracking-wide italic">{u.nombre || "Sin Nombre"}</span>
+                            <span className="text-white/30 text-xs font-mono">@{u.usuario}</span>
+                          </div>
+                        </td>
+                        <td className="px-8 py-5 text-center text-sm font-bold text-white/60">
+                          {u.telefono || "N/A"}
+                        </td>
+                        <td className="px-8 py-5 text-center">
                           <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase border tracking-widest ${
-                            clienteActivo ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'
-                          }`}>
-                            {clienteActivo ? 'Activo' : 'Inactivo'}
+                            u.rol === 'admin' ? 'bg-[#C5A473]/10 text-[#C5A473] border-[#C5A473]/20' :
+                            'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                            }`}>
+                            {u.rol}
                           </span>
-                        ) : (
-                          <span className="text-white/20 font-black">—</span>
-                        )}
-                      </td>
-                      <td className="px-8 py-5 text-center">
-                        <div className="flex justify-center gap-2">
-                          {esCliente && (
+                        </td>
+                        <td className="px-8 py-5 text-center">
+                          <div className="flex justify-center gap-2">
+                            {esCliente && (
+                              <button
+                                onClick={() => handleWhatsApp(u)}
+                                className="p-3 bg-[#25D366]/10 hover:bg-[#25D366] text-[#25D366] hover:text-white rounded-xl transition-all border border-[#25D366]/20 active:scale-90"
+                                title="Enviar WhatsApp"
+                              >
+                                <FiMessageCircle className="w-5 h-5" />
+                              </button>
+                            )}
                             <button
                               onClick={() => {
-                                setSelectedClient(u);
-                                setShowClientModal(true);
+                                setUserToEditPassword(u);
+                                setShowPasswordModal(true);
+                                setErrorMsg("");
                               }}
-                              className="p-3 bg-white/5 hover:bg-purple-500 text-white rounded-xl transition-all border border-white/5 active:scale-90"
-                              title="Ver Membresía"
+                              className="p-3 bg-white/5 hover:bg-[#C5A473] text-white rounded-xl transition-all border border-white/5 active:scale-90"
+                              title="Cambiar Contraseña"
                             >
-                              <FiEye className="w-5 h-5" />
+                              <FiLock className="w-5 h-5" />
                             </button>
-                          )}
-
-                          {/* BOTÓN WHATSAPP */}
-                          {esCliente && (
-                            <button
-                              onClick={() => handleWhatsApp(u)}
-                              className="p-3 bg-[#25D366]/10 hover:bg-[#25D366] text-[#25D366] hover:text-white rounded-xl transition-all border border-[#25D366]/20 active:scale-90"
-                              title="Enviar WhatsApp de renovación"
-                            >
-                              <FiMessageCircle className="w-5 h-5" />
-                            </button>
-                          )}
-
-                          <button
-                            onClick={() => {
-                              setUserToEditPassword(u);
-                              setShowPasswordModal(true);
-                              setErrorMsg("");
-                            }}
-                            className="p-3 bg-white/5 hover:bg-primary text-white rounded-xl transition-all border border-white/5 active:scale-90"
-                            title="Cambiar Contraseña"
-                          >
-                            <FiLock className="w-5 h-5" />
-                          </button>
-                          {puedeActualizarRol && (
-                            <button onClick={() => handleToggleRol(u._id, u.rol)} className="p-3 bg-white/5 hover:bg-secondary hover:text-black text-white rounded-xl transition-all border border-white/5 active:scale-90">
-                              <FiRefreshCw className="w-5 h-5" />
-                            </button>
-                          )}
-                          {!esYoMismo && (
-                            <button onClick={() => confirmDelete(u)} className="p-3 bg-white/5 hover:bg-red-600 text-white rounded-xl transition-all border border-white/5 active:scale-90">
-                              <FiTrash2 className="w-5 h-5" />
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* CARDS MÓVIL */}
-        <div className="grid grid-cols-1 gap-4 md:hidden pb-20">
-          {displayedUsers.length === 0 ? (
-            <div className="bg-black/40 border border-white/10 rounded-[2rem] p-10 text-center text-white/30 text-xs font-black uppercase tracking-widest">
-              No se encontraron usuarios
-            </div>
-          ) : (
-            displayedUsers.map((u) => {
-              const esCliente = u.rol === 'cliente';
-              const esYoMismo = u.usuario === currentUser.usuario;
-              const puedeActualizarRol = !esCliente && !esYoMismo;
-              const clienteActivo = isClienteActivo(u);
-
-              return (
-                <div key={u._id} className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-[2rem] p-5 flex items-center justify-between shadow-xl">
-                  <div className="flex items-center gap-4 min-w-0">
-                    <div className="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center text-secondary text-xl font-black border border-white/10 uppercase shrink-0">
-                      {(u.nombre || u.usuario).charAt(0).toUpperCase()}
-                    </div>
-                    <div className="flex flex-col min-w-0">
-                      <h3 className="text-white font-bold text-sm leading-none truncate italic">{u.nombre || "Sin Nombre"}</h3>
-                      <span className="text-white/30 text-[10px] font-mono mt-1">@{u.usuario}</span>
-                      
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        <span className={`w-fit px-2 py-0.5 rounded text-[8px] font-black uppercase border tracking-widest ${
-                          u.rol === 'admin' ? 'text-red-500 border-red-500/20 bg-red-500/10' : 
-                          u.rol === 'cliente' ? 'text-purple-400 border-purple-500/20 bg-purple-500/10' : 
-                          'text-blue-400 border-blue-500/20 bg-blue-500/10'
-                        }`}>
-                          {u.rol}
-                        </span>
-                        
-                        {esCliente && (
-                          <span className={`w-fit px-2 py-0.5 rounded text-[8px] font-black uppercase border tracking-widest ${
-                            clienteActivo ? 'text-green-400 border-green-500/20 bg-green-500/10' : 'text-red-400 border-red-500/20 bg-red-500/10'
-                          }`}>
-                            {clienteActivo ? 'Activo' : 'Inactivo'}
-                          </span>
-                        )}
-                      </div>
-
-                    </div>
-                  </div>
-                  <div className="flex flex-col gap-2 shrink-0">
-                    {esCliente && (
-                      <button
-                        onClick={() => {
-                          setSelectedClient(u);
-                          setShowClientModal(true);
-                        }}
-                        className="p-3.5 bg-white/5 text-purple-400 rounded-2xl border border-white/10 active:scale-90 transition-transform"
-                      >
-                        <FiEye className="w-5 h-5" />
-                      </button>
-                    )}
-
-                    {/* BOTÓN WHATSAPP MÓVIL */}
-                    {esCliente && (
-                      <button
-                        onClick={() => handleWhatsApp(u)}
-                        className="p-3.5 bg-[#25D366]/10 text-[#25D366] rounded-2xl border border-[#25D366]/20 active:scale-90 transition-transform"
-                      >
-                        <FiMessageCircle className="w-5 h-5" />
-                      </button>
-                    )}
-
-                    <button
-                      onClick={() => {
-                        setUserToEditPassword(u);
-                        setShowPasswordModal(true);
-                        setErrorMsg("");
-                      }}
-                      className="p-3.5 bg-white/5 text-primary rounded-2xl border border-white/10 active:scale-90 transition-transform"
-                    >
-                      <FiLock className="w-5 h-5" />
-                    </button>
-                    {puedeActualizarRol && (
-                      <button onClick={() => handleToggleRol(u._id, u.rol)} className="p-3.5 bg-white/5 text-secondary rounded-2xl border border-white/10 active:scale-90 transition-transform">
-                        <FiRefreshCw className="w-5 h-5" />
-                      </button>
-                    )}
-                    {!esYoMismo && (
-                      <button onClick={() => confirmDelete(u)} className="p-3.5 bg-white/5 text-red-500 rounded-2xl border border-white/10 active:scale-90 transition-transform">
-                        <FiTrash2 className="w-5 h-5" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )
-            })
-          )}
+                            {puedeActualizarRol && (
+                              <button
+                                onClick={() => handleToggleRol(u._id, u.rol)}
+                                className="p-3 bg-white/5 hover:bg-blue-500 text-white rounded-xl transition-all border border-white/5 active:scale-90"
+                                title="Cambiar Rol (Admin/Cliente)"
+                              >
+                                <FiUsers className="w-5 h-5" />
+                              </button>
+                            )}
+                            {!esYoMismo && (
+                              <button
+                                onClick={() => confirmDelete(u)}
+                                className="p-3 bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white rounded-xl transition-all border border-red-500/20 active:scale-90"
+                                title="Eliminar Usuario"
+                              >
+                                <FiTrash2 className="w-5 h-5" />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </main>
 
-      {/* MODAL DETALLES DEL CLIENTE */}
-      {showClientModal && selectedClient && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-          <div className="bg-[#1F1F1F] w-full max-w-sm rounded-[2.5rem] border border-white/10 shadow-2xl overflow-hidden animate-in zoom-in duration-300">
-            <div className="p-6 flex justify-between items-center border-b border-white/5 bg-black/20">
-              <h3 className="text-lg font-black text-white uppercase tracking-tighter italic">Datos de Membresía</h3>
-              <button onClick={() => setShowClientModal(false)} className="p-2 bg-white/5 rounded-full text-white/40 hover:text-white transition">
-                <FiX className="w-5 h-5" />
-              </button>
-            </div>
+      {/* --- MODALES --- */}
 
-            <div className="p-8 space-y-6">
-              <div className="text-center">
-                <div className="w-16 h-16 bg-purple-500/10 rounded-full flex items-center justify-center mx-auto border border-purple-500/20 mb-3">
-                  <FiUser className="text-purple-400 w-8 h-8" />
-                </div>
-                <h4 className="text-xl font-black uppercase text-white">{selectedClient.nombre}</h4>
-                <p className="text-xs text-white/40 font-mono mt-1">{selectedClient.membershipId || "Sin ID asignado"}</p>
-              </div>
-
-              <div className="space-y-3">
-                <div className="bg-black/40 p-4 rounded-2xl border border-white/5 flex items-center gap-4">
-                  <FiEdit3 className="text-primary w-5 h-5" />
-                  <div>
-                    <p className="text-[9px] uppercase tracking-widest text-white/40 font-black">Disciplina</p>
-                    <p className="text-sm text-white font-bold">{selectedClient.disciplina || "No inscrita"}</p>
-                  </div>
-                </div>
-
-                <div className="bg-black/40 p-4 rounded-2xl border border-white/5 flex items-center gap-4">
-                  <FiActivity className="text-secondary w-5 h-5" />
-                  <div>
-                    <p className="text-[9px] uppercase tracking-widest text-white/40 font-black">Clases Disponibles</p>
-                    <p className={`text-xl font-black ${selectedClient.clasesDisponibles > 0 ? 'text-white' : 'text-red-400'}`}>
-                      {selectedClient.clasesDisponibles || 0}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="bg-black/40 p-4 rounded-2xl border border-white/5 flex items-center gap-4">
-                  <FiCalendar className="text-green-400 w-5 h-5" />
-                  <div>
-                    <p className="text-[9px] uppercase tracking-widest text-white/40 font-black">Vencimiento</p>
-                    <p className="text-sm text-white font-bold">
-                      {selectedClient.fechaVencimiento 
-                        ? new Date(selectedClient.fechaVencimiento).toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' }) 
-                        : "Sin fecha activa"}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <button onClick={() => setShowClientModal(false)} className="w-full bg-white/5 hover:bg-white/10 text-white font-black py-4 rounded-[1.5rem] transition shadow-xl uppercase text-[10px] tracking-widest">
-                Cerrar Ventana
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL REGISTRO */}
+      {/* Modal Registrar Usuario */}
       {showRegisterModal && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-          <div className="bg-[#1F1F1F] w-full max-w-md rounded-t-[2.5rem] sm:rounded-[2.5rem] border border-white/10 shadow-2xl overflow-hidden animate-in slide-in-from-bottom-10 sm:zoom-in duration-300">
-            <div className="p-8 flex justify-between items-center border-b border-white/5">
-              <h3 className="text-xl font-black text-white uppercase tracking-tighter italic">Registrar Personal</h3>
-              <button onClick={() => setShowRegisterModal(false)} className="p-2 bg-white/5 rounded-full text-white/40 hover:text-white transition">
-                <FiX className="w-6 h-6" />
-              </button>
-            </div>
-
-            <form onSubmit={handleRegister} className="p-8 space-y-5">
-              {errorMsg && (
-                <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-4 rounded-2xl flex items-center gap-3 animate-pulse">
-                  <FiAlertTriangle className="shrink-0" />
-                  <span className="text-xs font-bold uppercase tracking-wider">{errorMsg}</span>
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-white/30 uppercase ml-2 tracking-widest italic">Nombre Completo</label>
-                <div className="relative">
-                  <FiEdit3 className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" />
-                  <input type="text" required value={formData.nombre} onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-                    className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white focus:border-primary outline-none text-sm transition" placeholder="Nombre completo" />
-                </div>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowRegisterModal(false)} />
+          <div className="relative bg-[#161616] border border-white/10 p-8 rounded-3xl w-full max-w-md shadow-2xl">
+            <h2 className="text-xl font-black uppercase tracking-tight mb-6">Nuevo Usuario</h2>
+            {errorMsg && <p className="text-red-400 text-xs font-bold mb-4">{errorMsg}</p>}
+            <form onSubmit={handleRegisterUser} className="space-y-4">
+              <input type="text" placeholder="Nombre completo" required value={formData.nombre} onChange={e => setFormData({...formData, nombre: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl py-3 px-4 text-white text-sm" />
+              <input type="text" placeholder="Nombre de usuario" required value={formData.usuario} onChange={e => setFormData({...formData, usuario: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl py-3 px-4 text-white text-sm" />
+              <input type="password" placeholder="Contraseña" required minLength="4" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl py-3 px-4 text-white text-sm" />
+              <select value={formData.rol} onChange={e => setFormData({...formData, rol: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl py-3 px-4 text-white text-sm">
+                <option value="cliente">Cliente</option>
+                <option value="admin">Administrador</option>
+              </select>
+              <div className="flex gap-3 pt-4">
+                <button type="button" onClick={() => setShowRegisterModal(false)} className="flex-1 py-3 bg-white/5 rounded-xl font-black uppercase text-xs">Cancelar</button>
+                <button type="submit" disabled={loading} className="flex-1 py-3 bg-[#C5A473] text-white rounded-xl font-black uppercase text-xs">{loading ? "Guardando..." : "Crear"}</button>
               </div>
-
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-white/30 uppercase ml-2 tracking-widest italic">ID Usuario (Único)</label>
-                <div className="relative">
-                  <FiUser className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" />
-                  <input type="text" required value={formData.usuario} onChange={(e) => setFormData({ ...formData, usuario: e.target.value })}
-                    className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white focus:border-primary outline-none text-sm transition" placeholder="Ej. adrian" />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-white/30 uppercase ml-2 tracking-widest italic">Contraseña</label>
-                <div className="relative">
-                  <FiLock className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" />
-                  <input type="password" required value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white focus:border-primary outline-none text-sm transition" placeholder="********" />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-white/30 uppercase ml-2 tracking-widest italic">Rol en Sistema</label>
-                <select className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 px-5 text-white focus:border-primary outline-none text-sm cursor-pointer appearance-none"
-                  value={formData.rol} onChange={(e) => setFormData({ ...formData, rol: e.target.value })}>
-                  <option value="cajero">Cajero (Ventas)</option>
-                  <option value="admin">Administrador (Control Total)</option>
-                  <option value="cocinero">Cocinero (Monitor Cocina)</option>
-                  <option value="mesero">Mesero (Control Mesas)</option>
-                  <option value="cliente">Cliente (Miembro)</option>
-                  <option value="kiosko">Kiosko</option>
-                </select>
-              </div>
-
-              <button type="submit" disabled={loading} className="w-full bg-primary hover:bg-[#00205B] text-white font-black py-5 rounded-[1.5rem] transition shadow-xl shadow-primary/20 mt-4 disabled:opacity-50 tracking-widest uppercase text-xs">
-                {loading ? "PROCESANDO..." : "REGISTRAR USUARIO"}
-              </button>
             </form>
           </div>
         </div>
       )}
 
-      {/* MODAL CAMBIAR CONTRASEÑA */}
-      {showPasswordModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-          <div className="bg-[#1F1F1F] w-full max-w-sm rounded-[2.5rem] border border-white/10 shadow-2xl overflow-hidden animate-in zoom-in duration-300">
-            <div className="p-8 flex justify-between items-center border-b border-white/5">
-              <h3 className="text-lg font-black text-white uppercase tracking-tighter italic">Nueva Contraseña</h3>
-              <button onClick={() => setShowPasswordModal(false)} className="p-2 bg-white/5 rounded-full text-white/40 hover:text-white transition">
-                <FiX className="w-6 h-6" />
-              </button>
-            </div>
-
-            <form onSubmit={handlePasswordChange} className="p-8 space-y-5">
-              <p className="text-[10px] text-white/40 uppercase tracking-widest text-center">
-                Cambiando clave para: <span className="text-primary font-bold">{userToEditPassword?.usuario}</span>
-              </p>
-
-              <div className="space-y-2">
-                <div className="relative">
-                  <FiLock className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" />
-                  <input
-                    type="password"
-                    required
-                    autoFocus
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white focus:border-primary outline-none text-sm transition"
-                    placeholder="Nueva contraseña"
-                  />
-                </div>
-              </div>
-
-              {errorMsg && <p className="text-red-500 text-[10px] font-bold uppercase text-center">{errorMsg}</p>}
-
-              <button type="submit" className="w-full bg-primary hover:bg-[#00205B] text-white font-black py-5 rounded-[1.5rem] transition shadow-xl shadow-primary/20 uppercase text-xs tracking-widest">
-                ACTUALIZAR CLAVE
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL ELIMINACIÓN */}
+      {/* Modal Confirmar Eliminar */}
       {showDeleteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm">
-          <div className="bg-[#1F1F1F] w-full max-w-sm rounded-[2.5rem] border border-white/10 shadow-2xl overflow-hidden animate-in zoom-in duration-300">
-            <div className="p-8 text-center space-y-5">
-              <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center mx-auto border border-red-500/20">
-                <FiAlertTriangle className="text-red-500 w-10 h-10" />
-              </div>
-              <h3 className="text-xl font-black text-white uppercase tracking-tight italic">¿Confirmar Baja?</h3>
-              <p className="text-white/40 text-xs leading-relaxed uppercase tracking-widest px-4">
-                Borrar a <span className="text-white font-bold">{userToDelete?.nombre || userToDelete?.usuario}</span> de la plantilla.
-              </p>
-              <div className="flex flex-col gap-3 pt-2">
-                <button onClick={handleDeleteUser} className="w-full py-5 bg-red-600 hover:bg-red-700 text-white font-black rounded-2xl transition shadow-xl shadow-red-600/20 uppercase tracking-widest text-[10px]">
-                  Sí, Eliminar Personal
-                </button>
-                <button onClick={() => setShowDeleteModal(false)} className="w-full py-4 bg-white/5 hover:bg-white/10 text-white font-bold rounded-2xl transition uppercase tracking-widest text-[10px]">
-                  Cancelar
-                </button>
-              </div>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowDeleteModal(false)} />
+          <div className="relative bg-[#161616] border border-red-500/20 p-8 rounded-3xl w-full max-w-sm text-center shadow-2xl">
+            <FiAlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+            <h2 className="text-xl font-black uppercase tracking-tight mb-2">¿Eliminar Usuario?</h2>
+            <p className="text-white/40 text-sm mb-6">Se borrará permanentemente a <strong>{userToDelete?.usuario}</strong>. Esta acción no se puede deshacer.</p>
+            <div className="flex gap-3">
+              <button onClick={() => setShowDeleteModal(false)} className="flex-1 py-3 bg-white/5 hover:bg-white/10 rounded-xl font-black text-xs uppercase transition-colors">Cancelar</button>
+              <button onClick={handleDeleteUser} className="flex-1 py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl font-black text-xs uppercase transition-colors">Eliminar</button>
             </div>
           </div>
         </div>
       )}
 
-      <footer className="mt-10 p-10 text-center opacity-10">
-        <p className="text-[10px] font-black uppercase tracking-[0.5em] italic">Staff Only - Rhythm</p>
-      </footer>
+      {/* Modal Cambiar Contraseña */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowPasswordModal(false)} />
+          <div className="relative bg-[#161616] border border-white/10 p-8 rounded-3xl w-full max-w-sm shadow-2xl">
+            <h2 className="text-xl font-black uppercase tracking-tight mb-2">Cambiar Contraseña</h2>
+            <p className="text-white/40 text-xs mb-6">Nueva contraseña para <strong>{userToEditPassword?.usuario}</strong></p>
+            {errorMsg && <p className="text-red-400 text-xs font-bold mb-4">{errorMsg}</p>}
+            <form onSubmit={handleChangePassword}>
+              <input type="password" placeholder="Nueva Contraseña" required minLength="4" value={newPassword} onChange={e => setNewPassword(e.target.value)} className="w-full bg-black/40 border border-white/10 rounded-xl py-3 px-4 text-white text-sm mb-6" />
+              <div className="flex gap-3">
+                <button type="button" onClick={() => setShowPasswordModal(false)} className="flex-1 py-3 bg-white/5 rounded-xl font-black uppercase text-xs">Cancelar</button>
+                <button type="submit" className="flex-1 py-3 bg-[#C5A473] text-white rounded-xl font-black uppercase text-xs">Actualizar</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

@@ -1,28 +1,19 @@
 const express = require('express');
 const router = express.Router();
 const { verifyToken, isAdmin } = require('../middleware/auth.middleware');
-const userController = require('../controllers/user.controller');
+const userCtrl = require('../controllers/user.controller');
 
-// --- RUNTAS PÚBLICAS ---
-router.post('/register', userController.register);
+// Público (registro desde frontend)
+router.post('/register', userCtrl.register);
 
-// --- RUTAS DE PERFIL / ALUMNO ---
-router.get('/perfil', verifyToken, userController.getProfile);
-router.put('/update-phone', verifyToken, userController.updatePhone);
-// Obtener info del alumno al escanear QR (la que ya corregimos)
-router.get('/member/:membershipId', verifyToken, userController.getMemberById);
+// Protegidas (autenticado)
+router.get('/perfil', verifyToken, userCtrl.getProfile);
+router.put('/telefono', verifyToken, userCtrl.updatePhone);
 
-// --- RUTAS DE OPERACIÓN (Staff / Admin) ---
-// Registrar entrada a clase (Descuenta 1 clase)
-router.post('/register-attendance', verifyToken, userController.registerAttendance);
-
-// Renovar o agregar clases/mes (Sustituye a add-points)
-router.post('/renew-membership', verifyToken, isAdmin, userController.renewMembership);
-
-// --- RUTAS DE ADMINISTRACIÓN (Solo Admins) ---
-router.get('/', verifyToken, isAdmin, userController.getUsers);
-router.put('/:id/rol', verifyToken, isAdmin, userController.updateUserRol);
-router.put('/:id/password', verifyToken, isAdmin, userController.updatePassword);
-router.delete('/:id', verifyToken, isAdmin, userController.deleteUser);
+// Admin
+router.get('/', verifyToken, isAdmin, userCtrl.getUsers);
+router.put('/:id/rol', verifyToken, isAdmin, userCtrl.updateUserRol);
+router.put('/:id/password', verifyToken, isAdmin, userCtrl.updatePassword);
+router.delete('/:id', verifyToken, isAdmin, userCtrl.deleteUser);
 
 module.exports = router;

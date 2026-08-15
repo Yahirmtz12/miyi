@@ -9,9 +9,9 @@ import {
   FiAlertCircle,
   FiArrowLeft,
   FiSmile,
-  FiCheckCircle // Añadido para el modal de éxito
+  FiCheckCircle,
+  FiScissors
 } from "react-icons/fi";
-import logoEmpresa from "../assets/logo.png";
 import { API_URL } from "../api";
 
 export default function Register() {
@@ -79,7 +79,7 @@ export default function Register() {
 
             <button
               onClick={() => navigate("/login")}
-              className="w-full h-14 bg-primary text-white font-black rounded-2xl mt-8 shadow-[0_10px_20px_rgba(0,51,160,0.3)] hover:scale-105 active:scale-95 transition-all uppercase tracking-[0.2em] text-xs"
+              className="w-full h-14 bg-[#C5A473] text-white font-black rounded-2xl mt-8 shadow-[0_10px_20px_rgba(197,164,115,0.3)] hover:scale-105 active:scale-95 transition-all uppercase tracking-[0.2em] text-xs"
             >
               Ir al Inicio de Sesión
             </button>
@@ -88,19 +88,15 @@ export default function Register() {
       )}
 
       {/* Luces ambientales de fondo */}
-      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-primary/10 blur-[120px] rounded-full" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-secondary/10 blur-[120px] rounded-full" />
+      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-[#C5A473]/10 blur-[120px] rounded-full" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-[#8C6A3B]/10 blur-[120px] rounded-full" />
 
       <div className="relative z-10 w-full max-w-[460px] px-6">
 
         <div className="flex justify-center mb-10">
-          <div className="relative p-[3px] bg-gradient-to-tr from-primary to-secondary rounded-full shadow-[0_0_50px_rgba(0,51,160,0.3)] transform hover:scale-105 transition-transform duration-500">
-            <div className="bg-white rounded-full overflow-hidden flex items-center justify-center w-28 h-28 shadow-md">
-              <img
-                src={logoEmpresa}
-                alt="Logo"
-                className="h-full w-full object-cover transform scale-110 transition-transform"
-              />
+          <div className="relative p-[3px] bg-gradient-to-tr from-[#C5A473] to-[#8C6A3B] rounded-full shadow-[0_0_50px_rgba(197,164,115,0.3)] transform hover:scale-105 transition-transform duration-500">
+            <div className="bg-[#C5A473] rounded-full overflow-hidden flex items-center justify-center w-28 h-28 shadow-md">
+              <FiScissors className="text-white text-5xl" />
             </div>
           </div>
         </div>
@@ -109,17 +105,17 @@ export default function Register() {
 
           <button
             onClick={() => navigate("/login")}
-            className="flex items-center gap-2 text-white/40 hover:text-secondary transition-colors text-[10px] font-black uppercase tracking-[0.2em] mb-8"
+            className="flex items-center gap-2 text-white/40 hover:text-[#C5A473] transition-colors text-[10px] font-black uppercase tracking-[0.2em] mb-8"
           >
             <FiArrowLeft className="text-lg" /> Volver al login
           </button>
 
           <div className="mb-8">
             <h1 className="text-3xl font-black text-white uppercase tracking-tighter italic leading-none">
-              ÚNETE AL <span className="text-primary">CLUB</span>
+              XOLOS <span className="text-[#C5A473]">BARBERSHOP</span>
             </h1>
-            <div className="h-1 w-12 bg-secondary mt-2 rounded-full" />
-            <p className="text-white/40 text-[11px] mt-4 font-medium uppercase tracking-widest italic">Beneficios exclusivos</p>
+            <div className="h-1 w-12 bg-[#C5A473] mt-2 rounded-full" />
+            <p className="text-white/40 text-[11px] mt-4 font-medium uppercase tracking-widest italic">Crea tu cuenta para agendar</p>
           </div>
 
           {error && (
@@ -133,32 +129,32 @@ export default function Register() {
 
             {/* Campo Nombre Completo */}
             <div className="flex flex-col gap-2 group">
-              <span className="text-white/30 text-[9px] font-black uppercase ml-4 tracking-[0.2em] group-focus-within:text-primary transition-colors">Nombre Completo</span>
+              <span className="text-white/30 text-[9px] font-black uppercase ml-4 tracking-[0.2em] group-focus-within:text-[#C5A473] transition-colors">Nombre Completo</span>
               <div className="relative">
-                <FiSmile className="absolute left-5 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-primary" size={18} />
+                <FiSmile className="absolute left-5 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-[#C5A473]" size={18} />
                 <input
                   type="text"
                   placeholder="Tu nombre aquí"
                   value={nombre}
                   onChange={(e) => setNombre(e.target.value)}
                   required
-                  className="w-full h-15 py-4 rounded-2xl bg-black/40 text-white border border-white/5 pl-14 pr-4 outline-none focus:border-primary/40 focus:bg-black/60 transition-all font-bold text-sm"
+                  className="w-full h-15 py-4 rounded-2xl bg-black/40 text-white border border-white/5 pl-14 pr-4 outline-none focus:border-[#C5A473]/40 focus:bg-black/60 transition-all font-bold text-sm"
                 />
               </div>
             </div>
 
             {/* Campo Usuario */}
             <div className="flex flex-col gap-2 group">
-              <span className="text-white/30 text-[9px] font-black uppercase ml-4 tracking-[0.2em] group-focus-within:text-secondary transition-colors">Nombre de Usuario</span>
+              <span className="text-white/30 text-[9px] font-black uppercase ml-4 tracking-[0.2em] group-focus-within:text-[#C5A473] transition-colors">Nombre de Usuario</span>
               <div className="relative">
-                <FiUser className="absolute left-5 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-secondary" size={18} />
+                <FiUser className="absolute left-5 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-[#C5A473]" size={18} />
                 <input
                   type="text"
                   placeholder="usuario123"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   required
-                  className="w-full h-15 py-4 rounded-2xl bg-black/40 text-white border border-white/5 pl-14 pr-4 outline-none focus:border-secondary/40 focus:bg-black/60 transition-all font-bold text-sm"
+                  className="w-full h-15 py-4 rounded-2xl bg-black/40 text-white border border-white/5 pl-14 pr-4 outline-none focus:border-[#C5A473]/40 focus:bg-black/60 transition-all font-bold text-sm"
                 />
               </div>
             </div>
@@ -199,7 +195,7 @@ export default function Register() {
               type="submit"
               disabled={loading || password.length < 8}
               className={`w-full h-16 font-black rounded-2xl transition-all shadow-xl mt-4 uppercase tracking-[0.2em] text-[11px] ${password.length >= 8
-                ? 'bg-primary text-white hover:scale-[1.02] shadow-primary/20'
+                ? 'bg-[#C5A473] text-white hover:scale-[1.02] shadow-[#C5A473]/20'
                 : 'bg-white/5 text-white/20 cursor-not-allowed'
                 }`}
             >

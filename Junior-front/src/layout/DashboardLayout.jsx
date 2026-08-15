@@ -1,30 +1,25 @@
 import { Outlet, NavLink, Navigate } from "react-router-dom";
 import { useState } from "react";
-import { FiMenu, FiLogOut, FiX } from "react-icons/fi";
-import logoEmpresa from "../assets/logo.png";
-import AttendanceListener from "../components/AttendanceListener";
+import { FiMenu, FiLogOut, FiX, FiScissors } from "react-icons/fi";
 
 export default function DashboardLayout() {
-  const [sidebarOpen, setSidebarOpen] = useState(false); // Iniciamos cerrado
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [hovered, setHovered] = useState(false);
 
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const rol = user.rol;
 
   if (rol === 'cliente') {
-    return <Navigate to="/mi-membresia" replace />;
+    return <Navigate to="/mis-citas" replace />;
   }
 
   const allNavItems = [
-    // { to: "/dashboard/sales", label: "Ventas", icon: "shopping_bag", roles: ['admin', 'cajero'] }, // CAFETERÍA DESHABILITADA
+    { to: "/dashboard/citas", label: "Citas", icon: "calendar_month", roles: ['admin'] },
+    { to: "/dashboard/ventas", label: "Ventas", icon: "point_of_sale", roles: ['admin'] },
+    { to: "/dashboard/inventario", label: "Inventario", icon: "inventory_2", roles: ['admin'] },
+    { to: "/dashboard/gastos", label: "Gastos", icon: "payments", roles: ['admin'] },
+    { to: "/dashboard/reportes", label: "Reportes", icon: "monitoring", roles: ['admin'] },
     { to: "/dashboard/users", label: "Usuarios", icon: "group", roles: ['admin'] },
-    { to: "/dashboard/loyalty", label: "Membresía", icon: "redeem", roles: ['admin', 'cajero'] },
-    { to: "/dashboard/kiosko", label: "Kiosko", icon: "backpack", roles: ['admin', 'kiosko', 'cajero'] },
-    { to: "/dashboard/salones", label: "Salones", icon: "event", roles: ['admin'] },
-    // { to: "/dashboard/inventory", label: "Inventario", icon: "inventory_2", roles: ['admin'] }, // CAFETERÍA DESHABILITADA
-    // { to: "/dashboard/reports", label: "Análisis", icon: "analytics", roles: ['admin'] }, // CAFETERÍA DESHABILITADA
-    // { to: "/dashboard/history", label: "Historial", icon: "history", roles: ['admin', 'cajero'] }, // CAFETERÍA DESHABILITADA
-    // { to: "/dashboard/expenses", label: "Gastos", icon: "receipt_long", roles: ['admin', 'cajero'] }, // CAFETERÍA DESHABILITADA
   ];
 
   const navItems = allNavItems.filter(item => item.roles.includes(rol));
@@ -32,10 +27,7 @@ export default function DashboardLayout() {
   return (
     <div className="flex h-screen overflow-hidden bg-[#1F1F1F]">
 
-      {/* Listener global de asistencias — siempre escuchando el lector QR */}
-      <AttendanceListener />
-
-      {/* OVERLAY: Fondo oscuro cuando el menú está abierto en móvil */}
+      {/* OVERLAY */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-black/60 z-40 lg:hidden backdrop-blur-sm"
@@ -56,27 +48,20 @@ export default function DashboardLayout() {
     ${hovered && !sidebarOpen ? "lg:w-64" : "lg:w-20"}
   `}
       >
-        {/* 1. HEADER: Fijo arriba */}
+        {/* HEADER */}
         <div className="shrink-0 transition-all duration-300">
           <div className="flex items-center justify-between px-4 py-6">
             <div className="flex items-center gap-3">
-              {/* Logo Circular con Recorte Correcto */}
-              <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shrink-0 border border-white/10 overflow-hidden">
-                <img
-                  src={logoEmpresa}
-                  alt="Logo"
-                  className="h-full w-full object-contain transform scale-124 transition-transform"
-                />
+              <div className="w-10 h-10 rounded-full bg-[#C5A473] flex items-center justify-center shrink-0 border border-[#C5A473]/30 overflow-hidden">
+                <FiScissors className="text-white text-lg" />
               </div>
 
-              {/* Texto del Logo (Ocultable) */}
               <div className={`flex flex-col transition-opacity duration-300 ${(sidebarOpen || hovered) ? "opacity-100" : "lg:opacity-0 pointer-events-none"}`}>
-                <h1 className="text-white text-sm font-black uppercase leading-tight">Rhythm</h1>
-                <p className="text-[9px] text-secondary font-bold uppercase tracking-wider">{rol}</p>
+                <h1 className="text-white text-sm font-black uppercase leading-tight">Xolos</h1>
+                <p className="text-[9px] text-[#C5A473] font-bold uppercase tracking-wider">{rol}</p>
               </div>
             </div>
 
-            {/* Botón cerrar (Solo Móvil) */}
             <button
               onClick={() => setSidebarOpen(false)}
               className="lg:hidden text-white/50 hover:text-white"
@@ -86,18 +71,18 @@ export default function DashboardLayout() {
           </div>
         </div>
 
-        {/* 2. NAVEGACIÓN: Con Scroll Independiente */}
+        {/* NAVEGACIÓN */}
         <nav className="flex-1 overflow-y-auto px-3 space-y-2 no-scrollbar scroll-smooth">
           {navItems.map(({ to, label, icon }) => (
             <NavLink
               key={to}
               to={to}
-              onClick={() => setSidebarOpen(false)} // Cierra el menú al navegar en móvil
+              onClick={() => setSidebarOpen(false)}
               className={({ isActive }) =>
                 `flex items-center gap-4 px-3 py-3.5 rounded-2xl text-sm font-bold transition-all group
           ${isActive
-                  ? "bg-primary text-white shadow-lg shadow-primary/20"
-                  : "text-white/40 hover:bg-white/5 hover:text-secondary"}`
+                  ? "bg-[#C5A473] text-white shadow-lg shadow-[#C5A473]/20"
+                  : "text-white/40 hover:bg-white/5 hover:text-[#C5A473]"}`
               }
             >
               <span className="material-symbols-outlined text-2xl shrink-0">{icon}</span>
@@ -108,7 +93,7 @@ export default function DashboardLayout() {
           ))}
         </nav>
 
-        {/* 3. FOOTER / LOGOUT: Fijo abajo */}
+        {/* LOGOUT */}
         <div className="p-4 shrink-0 border-t border-white/5 bg-[#262626]">
           <button
             onClick={() => {
@@ -135,11 +120,12 @@ export default function DashboardLayout() {
 
       {/* CONTENIDO PRINCIPAL */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* BARRA SUPERIOR (Solo visible en móvil o cuando el sidebar está cerrado) */}
         <header className="flex items-center justify-between px-6 py-4 bg-[#1F1F1F] lg:hidden border-b border-white/5">
           <div className="flex items-center gap-3">
-            <img src={logoEmpresa} className="w-8 h-8 rounded-full" alt="logo" />
-            <span className="text-white font-black uppercase text-xs">Rhythm</span>
+            <div className="w-8 h-8 rounded-full bg-[#C5A473] flex items-center justify-center">
+              <FiScissors className="text-white text-sm" />
+            </div>
+            <span className="text-white font-black uppercase text-xs">Xolos Barber</span>
           </div>
           <button
             onClick={() => setSidebarOpen(true)}

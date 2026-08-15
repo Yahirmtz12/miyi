@@ -1,28 +1,25 @@
 import { useState, useEffect } from "react";
-import { QRCodeCanvas } from "qrcode.react";
-import { FiStar, FiCalendar, FiLogOut, FiInfo, FiActivity, FiClock, FiPhone, FiCheckCircle, FiLoader, FiMessageCircle, FiChevronLeft, FiChevronRight, FiMapPin } from "react-icons/fi";
-import { GiChickenLeg } from "react-icons/gi";
-import logoEmpresa from "../assets/logo.png";
+import {
+  FiCalendar, FiClock, FiLogOut, FiScissors, FiLoader,
+  FiCheckCircle, FiAlertCircle, FiXCircle, FiPhone,
+  FiChevronRight, FiPlus
+} from "react-icons/fi";
 import { API_URL } from "../api";
 
-const DIAS_CORTO = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-const WHATSAPP_OWNER = '9515571964';
+const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+const DIAS_COMPLETO = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+
+const formatHour = (hora) => {
+  if (!hora) return '';
+  const h = parseInt(hora.split(':')[0]);
+  return `${h > 12 ? h - 12 : h}:00 ${h >= 12 ? 'PM' : 'AM'}`;
+};
 
 export default function CustomerDashboard() {
   const [user, setUser] = useState(null);
-  const [showPhoneModal, setShowPhoneModal] = useState(false);
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const [phoneLoading, setPhoneLoading] = useState(false);
-  const [phoneError, setPhoneError] = useState("");
-  const [phoneSaved, setPhoneSaved] = useState(false);
-
-  // --- SALONES ---
-  const [salones, setSalones] = useState([]);
-  const [salonSlots, setSalonSlots] = useState([]);
-  const [salonWeekOffset, setSalonWeekOffset] = useState(0);
-  const [salonLoading, setSalonLoading] = useState(true);
-  const [bookingSlot, setBookingSlot] = useState(null);
-  const [bookingSent, setBookingSent] = useState(false);
+  const [citas, setCitas] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [activeFilter, setActiveFilter] = useState('todas'); // todas, proximas, pasadas
 
   useEffect(() => {
     const fetchData = async () => {
@@ -40,395 +37,184 @@ export default function CustomerDashboard() {
           setUser(data);
           localStorage.setItem("user", JSON.stringify(data));
         }
-      } catch (err) {
-        console.log("Error actualizando datos.");
-      }
+      } catch (err) { console.log("Error actualizando datos."); }
+
+      // Cargar citas
+      try {
+        const citasRes = await fetch(`${API_URL}/api/citas/mis-citas`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const citasData = await citasRes.json();
+        if (citasRes.ok) setCitas(citasData);
+      } catch (err) { console.log("Error cargando citas."); }
+
+      setLoading(false);
     };
     fetchData();
-    fetchSalones();
   }, []);
-
-  // Fetch salones
-  const fetchSalones = async () => {
-    try {
-      const res = await fetch(`${API_URL}/api/salones`);
-      const data = await res.json();
-      setSalones(data);
-    } catch (err) { console.error('Error cargando salones'); }
-  };
-
-  // Semana de salones
-  const getSalonWeekDates = () => {
-    const today = new Date();
-    const start = new Date(today);
-    start.setDate(today.getDate() - today.getDay() + (salonWeekOffset * 7));
-    const dates = [];
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(start);
-      d.setDate(start.getDate() + i);
-      dates.push(d);
-    }
-    return dates;
-  };
-
-  const salonWeekDates = getSalonWeekDates();
-
-  useEffect(() => {
-    const fetchSalonSlots = async () => {
-      setSalonLoading(true);
-      const desde = salonWeekDates[0].toISOString().split('T')[0];
-      const hasta = salonWeekDates[6].toISOString().split('T')[0];
-      try {
-        const res = await fetch(`${API_URL}/api/salones/slots?desde=${desde}&hasta=${hasta}`);
-        const data = await res.json();
-        setSalonSlots(data);
-      } catch (err) { console.error('Error cargando slots'); }
-      finally { setSalonLoading(false); }
-    };
-    fetchSalonSlots();
-  }, [salonWeekOffset]);
-
-  const getAvailableSlots = (date, salonId) => {
-    const dateStr = date.toISOString().split('T')[0];
-    return salonSlots.filter(s => {
-      const slotDate = new Date(s.fecha).toISOString().split('T')[0];
-      const id = typeof s.salon === 'object' ? s.salon._id : s.salon;
-      return slotDate === dateStr && id === salonId && s.estado === 'disponible';
-    });
-  };
-
-  const handleSalonWhatsApp = (slot) => {
-    const salonName = slot.salon?.nombre || 'Salón';
-    const fecha = new Date(slot.fecha).toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
-    const horario = `${slot.horaInicio} a ${slot.horaFin}`;
-    const nombre = user?.nombre || '';
-
-    let msg = `¡Hola! 👋 Soy *${nombre}*, miembro de Rhythm. Me interesa apartar el *${salonName}* el día *${fecha}* de *${horario}*. ¿Cuál sería el precio? 🙏`;
-
-    const url = `https://wa.me/52${WHATSAPP_OWNER}?text=${encodeURIComponent(msg)}`;
-    window.open(url, '_blank');
-
-    // Best-effort: marcar como reservado
-    const token = localStorage.getItem('token');
-    fetch(`${API_URL}/api/salones/slots/${slot._id}/reservar`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-      body: JSON.stringify({ nombre: user?.nombre, telefono: user?.telefono || '' }),
-    }).catch(() => {});
-
-    setBookingSent(true);
-    setTimeout(() => setBookingSent(false), 4000);
-  };
-
-  const isSalonToday = (date) => date.toDateString() === new Date().toDateString();
-  const isSalonPast = (date) => {
-    const today = new Date(); today.setHours(0,0,0,0);
-    const d = new Date(date); d.setHours(0,0,0,0);
-    return d < today;
-  };
-
-  const totalVisitas = user?.visitas?.length || 0;
-  const patitasActivas = totalVisitas % 7 === 0 && totalVisitas > 0 ? 7 : totalVisitas % 7;
 
   const handleLogout = () => {
     localStorage.clear();
     window.location.href = "/";
   };
 
-  // Formateo visual del teléfono
-  const handlePhoneInput = (value) => {
-    const digits = value.replace(/\D/g, '').slice(0, 10);
-    if (digits.length <= 3) {
-      setPhoneNumber(digits);
-    } else if (digits.length <= 6) {
-      setPhoneNumber(`${digits.slice(0, 3)} ${digits.slice(3)}`);
-    } else {
-      setPhoneNumber(`${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6)}`);
-    }
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+
+  const citasFiltradas = citas.filter(c => {
+    const fechaCita = new Date(c.fecha);
+    fechaCita.setHours(0, 0, 0, 0);
+    
+    if (activeFilter === 'proximas') return fechaCita >= hoy && (c.estado === 'pendiente' || c.estado === 'confirmada');
+    if (activeFilter === 'pasadas') return fechaCita < hoy || c.estado === 'completada' || c.estado === 'rechazada' || c.estado === 'cancelada';
+    return true;
+  });
+
+  const proximaCita = citas.find(c => {
+    const fechaCita = new Date(c.fecha);
+    fechaCita.setHours(0, 0, 0, 0);
+    return fechaCita >= hoy && (c.estado === 'pendiente' || c.estado === 'confirmada');
+  });
+
+  const estadoConfig = {
+    pendiente: { icon: <FiAlertCircle />, color: 'text-amber-400', bg: 'bg-amber-500/10', border: 'border-amber-500/20', label: 'Pendiente' },
+    confirmada: { icon: <FiCheckCircle />, color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', label: 'Confirmada' },
+    rechazada: { icon: <FiXCircle />, color: 'text-red-400', bg: 'bg-red-500/10', border: 'border-red-500/20', label: 'Rechazada' },
+    completada: { icon: <FiCheckCircle />, color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20', label: 'Completada' },
+    cancelada: { icon: <FiXCircle />, color: 'text-gray-400', bg: 'bg-gray-500/10', border: 'border-gray-500/20', label: 'Cancelada' },
   };
 
-  const handleSavePhone = async () => {
-    const cleanPhone = phoneNumber.replace(/\D/g, '');
-    if (cleanPhone.length < 10) {
-      setPhoneError("Ingresa un número de 10 dígitos");
-      return;
-    }
-    setPhoneLoading(true);
-    setPhoneError("");
-
-    try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(`${API_URL}/api/users/update-phone`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ telefono: cleanPhone }),
-      });
-
-      const data = await res.json();
-      if (res.ok) {
-        const updatedUser = { ...user, telefono: cleanPhone };
-        setUser(updatedUser);
-        localStorage.setItem("user", JSON.stringify(updatedUser));
-        setPhoneSaved(true);
-        setTimeout(() => {
-          setShowPhoneModal(false);
-          setPhoneSaved(false);
-          setPhoneNumber("");
-        }, 2000);
-      } else {
-        setPhoneError(data.msg || "Error al guardar");
-      }
-    } catch (err) {
-      setPhoneError("Error de conexión");
-    } finally {
-      setPhoneLoading(false);
-    }
-  };
-
-  if (!user) return null;
-
-  const needsPhone = !user.telefono;
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center">
+        <FiLoader className="animate-spin text-[#C5A473] w-8 h-8" />
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-[#1A1A1A] text-white p-6 pb-12 flex flex-col items-center font-sans">
-      
-      {/* BANNER PARA REGISTRAR TELÉFONO */}
-      {needsPhone && (
-        <div 
-          onClick={() => setShowPhoneModal(true)}
-          className="w-full max-w-md mb-4 bg-[#25D366]/10 border border-[#25D366]/20 p-4 rounded-[2rem] flex gap-3 items-center cursor-pointer hover:bg-[#25D366]/15 transition-all active:scale-[0.98] animate-in slide-in-from-top-3 duration-500"
-        >
-          <div className="w-10 h-10 bg-[#25D366]/20 rounded-full flex items-center justify-center shrink-0">
-            <FiPhone className="text-[#25D366]" size={18} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-[10px] font-black text-[#25D366] uppercase tracking-widest">Acción requerida</p>
-            <p className="text-[11px] text-white/50 font-medium mt-0.5 leading-tight">Registra tu número de WhatsApp para recibir notificaciones</p>
-          </div>
-          <div className="text-[#25D366]/40 text-xl">›</div>
-        </div>
-      )}
-
-      {/* MODAL REGISTRAR TELÉFONO */}
-      {showPhoneModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center px-6">
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-xl" onClick={() => setShowPhoneModal(false)} />
-          <div className="relative bg-[#161616] border border-white/10 p-10 rounded-[3rem] max-w-sm w-full text-center shadow-[0_0_50px_rgba(0,0,0,1)] animate-in zoom-in-95 duration-300">
-            {phoneSaved ? (
-              <>
-                <div className="flex justify-center mb-6">
-                  <div className="w-20 h-20 bg-[#25D366]/10 rounded-full flex items-center justify-center border border-[#25D366]/20">
-                    <FiCheckCircle className="text-[#25D366] text-4xl animate-bounce" />
-                  </div>
-                </div>
-                <h2 className="text-2xl font-black text-white uppercase tracking-tighter italic">¡Listo!</h2>
-                <p className="text-white/40 text-sm mt-3 font-medium">Tu número ha sido registrado.</p>
-              </>
-            ) : (
-              <>
-                <div className="flex justify-center mb-6">
-                  <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center border border-primary/20">
-                    <FiPhone className="text-primary text-3xl" />
-                  </div>
-                </div>
-                <h2 className="text-xl font-black text-white uppercase tracking-tighter italic">Registra tu Número</h2>
-                <p className="text-white/40 text-xs mt-3 font-medium leading-relaxed">
-                  Agrega tu número de WhatsApp para recibir notificaciones sobre tu membresía.
-                </p>
-                <div className="mt-6 relative">
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 text-xs font-black">+52</div>
-                  <input
-                    type="tel"
-                    placeholder="000 000 0000"
-                    value={phoneNumber}
-                    onChange={(e) => handlePhoneInput(e.target.value)}
-                    className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 pl-14 pr-4 text-white text-center text-lg font-bold tracking-[0.15em] focus:border-primary outline-none transition-all placeholder:text-white/10"
-                    autoFocus
-                  />
-                </div>
-                {phoneError && (
-                  <p className="text-red-400 text-[10px] font-bold uppercase mt-3 tracking-wider">{phoneError}</p>
-                )}
-                <button
-                  onClick={handleSavePhone}
-                  disabled={phoneLoading}
-                  className="w-full h-14 bg-primary text-white font-black rounded-2xl mt-6 shadow-[0_10px_20px_rgba(0,51,160,0.3)] hover:scale-[1.02] active:scale-95 transition-all uppercase tracking-[0.2em] text-xs disabled:opacity-50"
-                >
-                  {phoneLoading ? <FiLoader className="animate-spin mx-auto" /> : "Guardar Número"}
-                </button>
-                <button
-                  onClick={() => setShowPhoneModal(false)}
-                  className="w-full py-3 mt-3 text-white/20 hover:text-white/40 text-[10px] font-black uppercase tracking-widest transition-colors"
-                >
-                  Cancelar
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-      )}
-
+    <div className="min-h-screen bg-[#0A0A0A] text-white font-sans">
       {/* HEADER */}
-      <div className="w-full max-w-md mb-8 relative">
-        <div className="absolute -top-4 -left-4 w-20 h-20 bg-primary/10 blur-[40px] rounded-full" />
-        <div className="relative flex justify-between items-center bg-white/[0.03] backdrop-blur-md border border-white/10 p-4 rounded-[2.5rem] shadow-2xl">
-          <div className="flex items-center gap-4">
-            <div className="relative w-14 h-14 rounded-2xl bg-gradient-to-br from-primary via-[#00205B] to-black flex items-center justify-center font-black text-2xl shadow-2xl border border-white/20">
-              {user.nombre.charAt(0).toUpperCase()}
+      <header className="sticky top-0 z-40 bg-[#0A0A0A]/80 backdrop-blur-2xl border-b border-white/5">
+        <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-[#C5A473]/10 rounded-xl flex items-center justify-center border border-[#C5A473]/20">
+              <FiScissors className="text-[#C5A473]" />
             </div>
-            <div className="flex flex-col">
-              <h1 className="text-xl font-black uppercase tracking-tighter">{user.nombre.split(' ')[0]}</h1>
-              <span className="text-secondary text-[9px] font-black uppercase tracking-[0.2em] bg-secondary/10 px-2 py-0.5 rounded-md border border-secondary/20 w-fit">Miembro</span>
+            <div>
+              <h1 className="text-sm font-black uppercase tracking-wider">Xolos Barber</h1>
+              <p className="text-[9px] text-white/30 font-bold uppercase tracking-widest">Mi cuenta</p>
             </div>
           </div>
-          <button onClick={handleLogout} className="w-12 h-12 flex items-center justify-center bg-white/5 rounded-2xl border border-white/5 hover:bg-red-500/10 transition-all">
-            <FiLogOut className="text-white/40 group-hover:text-red-500 w-5 h-5" />
+          <button onClick={handleLogout} className="p-2.5 bg-white/5 rounded-xl text-white/40 hover:text-red-400 hover:bg-red-500/10 transition">
+            <FiLogOut className="w-5 h-5" />
           </button>
         </div>
-      </div>
+      </header>
 
-      {/* TARJETA QR PRINCIPAL */}
-      <div className="w-full max-w-md bg-[#0f0f0f] rounded-[3.5rem] p-1 border border-white/10 shadow-2xl relative overflow-hidden group">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(0,51,160,0.1),transparent_70%)]" />
-        
-        <div className="w-full h-full bg-[#161616]/80 backdrop-blur-xl rounded-[3.3rem] p-8 flex flex-col items-center border border-white/5">
-          
-          {/* QR SECTION */}
-          <div className="relative mt-4">
-            <div className="absolute -top-4 -left-4 w-10 h-10 border-t-4 border-l-4 border-primary rounded-tl-2xl opacity-50" />
-            <div className="absolute -bottom-4 -right-4 w-10 h-10 border-b-4 border-r-4 border-primary rounded-br-2xl opacity-50" />
-            <div className="bg-white p-4 rounded-[2rem] shadow-2xl relative z-10 border-[6px] border-black">
-              <QRCodeCanvas value={user.membershipId} size={170} level={"H"} imageSettings={{ src: logoEmpresa, height: 40, width: 40, excavate: true }} />
+      <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
+        {/* BIENVENIDA */}
+        <div className="bg-gradient-to-br from-[#C5A473]/10 via-transparent to-transparent border border-[#C5A473]/10 rounded-3xl p-6">
+          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[#C5A473] mb-1">Bienvenido</p>
+          <h2 className="text-2xl font-black uppercase tracking-tighter">{user?.nombre || 'Cliente'}</h2>
+          {user?.telefono && (
+            <p className="text-white/30 text-xs flex items-center gap-1 mt-1">
+              <FiPhone className="text-[10px]" /> {user.telefono}
+            </p>
+          )}
+        </div>
+
+        {/* PRÓXIMA CITA */}
+        {proximaCita && (
+          <div className="bg-white/[0.03] border border-[#C5A473]/20 rounded-2xl p-5 space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[#C5A473]">Próxima cita</p>
+              <span className={`text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${estadoConfig[proximaCita.estado]?.bg} ${estadoConfig[proximaCita.estado]?.border} border ${estadoConfig[proximaCita.estado]?.color}`}>
+                {estadoConfig[proximaCita.estado]?.label}
+              </span>
             </div>
-          </div>
-
-          {/* NUEVA SECCIÓN: ESTADO DE MENSUALIDAD (POST-QR) */}
-          <div className="mt-10 w-full space-y-4">
-            <div className="flex justify-center">
-              <div className="bg-white/[0.03] border border-white/10 px-5 py-1.5 rounded-xl">
-                <span className="text-xs font-mono font-black text-primary tracking-[0.3em]">{user.membershipId}</span>
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 bg-[#C5A473]/10 rounded-2xl flex flex-col items-center justify-center border border-[#C5A473]/20">
+                <span className="text-xl font-black text-[#C5A473]">{new Date(proximaCita.fecha).getDate()}</span>
+                <span className="text-[7px] font-black uppercase text-[#C5A473]/60">{MESES[new Date(proximaCita.fecha).getMonth()]?.slice(0,3)}</span>
+              </div>
+              <div className="flex-1">
+                <h3 className="font-black text-lg text-white">{proximaCita.servicio}</h3>
+                {proximaCita.extras?.length > 0 && (
+                  <p className="text-[10px] text-[#8C6A3B] font-bold">+ {proximaCita.extras.map(e => e.nombre).join(', ')}</p>
+                )}
+                <p className="text-white/40 text-xs flex items-center gap-1 mt-1">
+                  <FiClock className="text-[10px]" /> {formatHour(proximaCita.horaInicio)} — ${proximaCita.precioTotal}
+                </p>
               </div>
             </div>
-
-            <div className="flex flex-col items-center">
-               <h2 className="text-2xl font-black uppercase italic tracking-tighter">{user.nombre}</h2>
-               <p className="text-[9px] font-bold text-white/20 uppercase tracking-[0.4em] mb-4">Socio Activo</p>
-               
-               {/* INDICADORES DINÁMICOS */}
-               <div className="grid grid-cols-2 gap-3 w-full">
-                  <div className="bg-black/40 border border-white/5 p-4 rounded-3xl flex flex-col items-center justify-center relative overflow-hidden group/item">
-                    <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover/item:opacity-100 transition-opacity" />
-                    <FiActivity className="text-primary mb-1" size={16} />
-                    <span className="text-lg font-black tracking-tighter text-white">{user.clasesDisponibles || 0}</span>
-                    <span className="text-[8px] font-black uppercase text-white/30 tracking-widest">Clases disponibles</span>
-                  </div>
-
-                  <div className="bg-black/40 border border-white/5 p-4 rounded-3xl flex flex-col items-center justify-center relative overflow-hidden group/item">
-                    <div className="absolute inset-0 bg-secondary/5 opacity-0 group-hover/item:opacity-100 transition-opacity" />
-                    <FiClock className="text-secondary mb-1" size={16} />
-                    <span className="text-lg font-black tracking-tighter text-white uppercase">
-                      {user.fechaVencimiento ? new Date(user.fechaVencimiento).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' }) : '--'}
-                    </span>
-                    <span className="text-[8px] font-black uppercase text-white/30 tracking-widest">Vencimiento</span>
-                  </div>
-               </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-
-      {/* SECCIÓN: RESERVAR SALÓN */}
-      <div className="w-full max-w-md mt-8">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="p-2 bg-primary/10 rounded-xl border border-primary/20">
-            <FiMapPin className="text-primary" size={16} />
-          </div>
-          <div>
-            <h2 className="text-sm font-black uppercase tracking-tight">Reservar Salón</h2>
-            <p className="text-[9px] text-white/30 font-bold uppercase tracking-widest">Selecciona un horario disponible</p>
-          </div>
-        </div>
-
-        {/* Toast de envío */}
-        {bookingSent && (
-          <div className="mb-4 bg-[#25D366]/10 border border-[#25D366]/20 p-3 rounded-2xl flex items-center gap-2 animate-in slide-in-from-top-3">
-            <FiCheckCircle className="text-[#25D366]" />
-            <span className="text-[10px] font-bold text-[#25D366] uppercase tracking-wider">Mensaje enviado por WhatsApp</span>
           </div>
         )}
 
-        {/* Navegador de semana mini */}
-        <div className="flex items-center justify-between bg-white/[0.03] border border-white/5 rounded-2xl p-3 mb-4">
-          <button onClick={() => setSalonWeekOffset(prev => Math.max(0, prev - 1))} disabled={salonWeekOffset === 0} className="p-2 bg-white/5 rounded-xl transition-all disabled:opacity-20">
-            <FiChevronLeft className="w-4 h-4" />
-          </button>
-          <p className="text-[10px] font-black uppercase tracking-widest text-white/40">
-            {salonWeekDates[0].toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })} — {salonWeekDates[6].toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}
-          </p>
-          <button onClick={() => setSalonWeekOffset(prev => prev + 1)} className="p-2 bg-white/5 rounded-xl transition-all">
-            <FiChevronRight className="w-4 h-4" />
-          </button>
+        {/* BOTÓN AGENDAR */}
+        <button
+          onClick={() => window.location.href = '/agendar'}
+          className="w-full py-4 bg-[#C5A473] text-white font-black rounded-2xl uppercase tracking-widest text-sm flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-[0.99] transition-all shadow-lg shadow-[#C5A473]/20"
+        >
+          <FiPlus className="text-lg" /> Agendar Nueva Cita
+        </button>
+
+        {/* FILTROS */}
+        <div className="flex gap-2">
+          {[
+            { key: 'todas', label: 'Todas' },
+            { key: 'proximas', label: 'Próximas' },
+            { key: 'pasadas', label: 'Pasadas' },
+          ].map(f => (
+            <button
+              key={f.key}
+              onClick={() => setActiveFilter(f.key)}
+              className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${
+                activeFilter === f.key
+                  ? 'bg-[#C5A473]/10 border-[#C5A473]/20 text-[#C5A473]'
+                  : 'bg-white/[0.02] border-white/5 text-white/30 hover:text-white/50'
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
         </div>
 
-        {/* Salones */}
-        {salonLoading ? (
-          <div className="flex justify-center py-8"><FiLoader className="animate-spin text-primary w-6 h-6" /></div>
-        ) : (
-          <div className="space-y-4">
-            {salones.map(salon => (
-              <div key={salon._id} className="bg-white/[0.02] border border-white/5 rounded-[2rem] overflow-hidden">
-                <div className="flex items-center gap-2 px-4 py-3 border-b border-white/5" style={{ background: `linear-gradient(90deg, ${salon.color}10, transparent)` }}>
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: salon.color }} />
-                  <span className="text-[10px] font-black uppercase tracking-widest text-white/60">{salon.nombre}</span>
+        {/* LISTA DE CITAS */}
+        <div className="space-y-3">
+          {citasFiltradas.length === 0 ? (
+            <div className="text-center py-16 bg-white/[0.02] rounded-3xl border border-white/5">
+              <FiCalendar className="w-12 h-12 mx-auto mb-4 text-white/10" />
+              <p className="text-sm font-black uppercase tracking-widest text-white/20">No tienes citas</p>
+              <p className="text-xs text-white/10 mt-2">Agenda tu primera cita y aparecerá aquí</p>
+            </div>
+          ) : (
+            citasFiltradas.map((cita) => {
+              const fecha = new Date(cita.fecha);
+              const estado = estadoConfig[cita.estado] || estadoConfig.pendiente;
+              return (
+                <div key={cita._id} className={`${estado.bg} border ${estado.border} rounded-2xl p-4 flex items-center gap-4`}>
+                  <div className="w-12 h-12 bg-black/20 rounded-xl flex flex-col items-center justify-center shrink-0">
+                    <span className="text-lg font-black">{fecha.getDate()}</span>
+                    <span className="text-[7px] font-bold uppercase text-white/40">{MESES[fecha.getMonth()]?.slice(0,3)}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-bold text-sm text-white truncate">{cita.servicio}</h3>
+                      {cita.extras?.length > 0 && <span className="text-[9px] text-[#8C6A3B] font-bold">+{cita.extras.length}</span>}
+                    </div>
+                    <p className="text-white/30 text-[10px] flex items-center gap-2 mt-0.5">
+                      <span className="flex items-center gap-0.5"><FiClock className="text-[8px]" /> {formatHour(cita.horaInicio)}</span>
+                      <span>•</span>
+                      <span>${cita.precioTotal}</span>
+                    </p>
+                  </div>
+                  <span className={`text-lg ${estado.color}`}>{estado.icon}</span>
                 </div>
-                <div className="grid grid-cols-7 gap-px">
-                  {salonWeekDates.map((date, i) => {
-                    const daySlots = getAvailableSlots(date, salon._id);
-                    const past = isSalonPast(date);
-                    return (
-                      <div key={i} className={`p-1.5 min-h-[60px] ${past ? 'opacity-20' : ''} ${isSalonToday(date) ? 'bg-primary/[0.04]' : ''}`}>
-                        <p className={`text-[7px] font-black uppercase text-center mb-1 ${isSalonToday(date) ? 'text-primary' : 'text-white/15'}`}>
-                          {DIAS_CORTO[date.getDay()]} {date.getDate()}
-                        </p>
-                        {daySlots.map(slot => (
-                          <button
-                            key={slot._id}
-                            onClick={() => !past && handleSalonWhatsApp(slot)}
-                            disabled={past}
-                            className="w-full text-left p-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 active:scale-95 transition-all mb-1"
-                          >
-                            <p className="text-[8px] font-black">{slot.horaInicio}</p>
-                            <p className="text-[7px] opacity-50">{slot.horaFin}</p>
-                          </button>
-                        ))}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-            {salones.length === 0 && (
-              <p className="text-center text-white/20 text-xs py-6 font-bold uppercase tracking-widest">Sin salones disponibles</p>
-            )}
-          </div>
-        )}
-
-        <div className="flex items-center justify-center gap-2 mt-4 text-[8px] text-white/20 font-bold uppercase tracking-widest">
-          <FiMessageCircle className="text-[#25D366] w-3 h-3" />
-          Toca un horario para apartar vía WhatsApp
+              );
+            })
+          )}
         </div>
-      </div>
-
-      {/* FOOTER INFO */}
-      <div className="w-full max-w-md mt-6 bg-primary/5 border border-primary/20 p-4 rounded-[2rem] flex gap-3 items-center">
-        <FiInfo className="text-primary shrink-0" size={18} />
-        <p className="text-[9px] text-white/40 leading-tight font-medium">
-          Muestra tu QR en recepción para registrar tu asistencia. Las clases vencen el día indicado arriba.
-        </p>
       </div>
     </div>
   );

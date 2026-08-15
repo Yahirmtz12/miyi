@@ -32,10 +32,6 @@ exports.login = async (req, res) => {
         nombre: user.nombre,
         usuario: user.usuario,
         rol: user.rol,
-        // Agregamos estos 3 campos vitales:
-        membershipId: user.membershipId, 
-        puntos: user.puntos || 0,
-        visitas: user.visitas || [],
         telefono: user.telefono || ''
       }
     });

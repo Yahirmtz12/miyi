@@ -8,9 +8,9 @@ import {
   FiLoader,
   FiAlertCircle,
   FiPhone,
-  FiCheckCircle
+  FiCheckCircle,
+  FiScissors
 } from "react-icons/fi";
-import logoEmpresa from "../assets/logo.png";
 import { API_URL } from "../api";
 
 export default function Login() {
@@ -66,7 +66,8 @@ export default function Login() {
         setShowPhoneModal(true);
         setLoading(false);
       } else {
-        window.location.href = "/dashboard";
+        const savedUser = JSON.parse(localStorage.getItem("user") || "{}");
+        window.location.href = savedUser.rol === 'cliente' ? '/mis-citas' : '/dashboard';
       }
 
     } catch (err) {
@@ -86,7 +87,7 @@ export default function Login() {
     setPhoneError("");
 
     try {
-      const res = await fetch(`${API_URL}/api/users/update-phone`, {
+      const res = await fetch(`${API_URL}/api/users/telefono`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -102,7 +103,8 @@ export default function Login() {
         localStorage.setItem("user", JSON.stringify(updatedUser));
         setPhoneSaved(true);
         setTimeout(() => {
-          window.location.href = "/dashboard";
+          const savedUser2 = JSON.parse(localStorage.getItem("user") || "{}");
+          window.location.href = savedUser2.rol === 'cliente' ? '/mis-citas' : '/dashboard';
         }, 1500);
       } else {
         setPhoneError(data.msg || "Error al guardar");
@@ -115,7 +117,8 @@ export default function Login() {
   };
 
   const handleSkipPhone = () => {
-    window.location.href = "/dashboard";
+    const savedUser3 = JSON.parse(localStorage.getItem("user") || "{}");
+    window.location.href = savedUser3.rol === 'cliente' ? '/mis-citas' : '/dashboard';
   };
 
   // Formateo visual del teléfono mientras escribe
@@ -134,8 +137,8 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-[#0A0A0A]">
 
       {/* Luces de profundidad de marca */}
-      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-primary/10 blur-[120px] rounded-full animate-pulse" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-secondary/10 blur-[120px] rounded-full animate-pulse" />
+      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-[#C5A473]/10 blur-[120px] rounded-full animate-pulse" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-[#8C6A3B]/10 blur-[120px] rounded-full animate-pulse" />
 
       {/* --- MODAL PARA REGISTRAR TELÉFONO --- */}
       {showPhoneModal && (
@@ -165,7 +168,7 @@ export default function Login() {
 
                 <h2 className="text-xl font-black text-white uppercase tracking-tighter italic">Registra tu Número</h2>
                 <p className="text-white/40 text-xs mt-3 font-medium leading-relaxed">
-                  Agrega tu número de WhatsApp para recibir notificaciones importantes sobre tu membresía.
+                  Agrega tu número de WhatsApp para recibir confirmaciones de tus citas.
                 </p>
 
                 <div className="mt-6 relative">
@@ -187,7 +190,7 @@ export default function Login() {
                 <button
                   onClick={handleSavePhone}
                   disabled={phoneLoading}
-                  className="w-full h-14 bg-primary text-white font-black rounded-2xl mt-6 shadow-[0_10px_20px_rgba(0,51,160,0.3)] hover:scale-[1.02] active:scale-95 transition-all uppercase tracking-[0.2em] text-xs disabled:opacity-50"
+                  className="w-full h-14 bg-[#C5A473] text-white font-black rounded-2xl mt-6 shadow-[0_10px_20px_rgba(197,164,115,0.3)] hover:scale-[1.02] active:scale-95 transition-all uppercase tracking-[0.2em] text-xs disabled:opacity-50"
                 >
                   {phoneLoading ? <FiLoader className="animate-spin mx-auto" /> : "Guardar Número"}
                 </button>
@@ -209,13 +212,9 @@ export default function Login() {
         {/* Contenedor del Logo con efecto Elevado */}
         {/* Contenedor del Logo con efecto Elevado y Zoom */}
         <div className="flex justify-center mb-10">
-          <div className="relative p-[3px] bg-gradient-to-tr from-primary to-secondary rounded-full shadow-[0_0_50px_rgba(0,51,160,0.3)] transform hover:scale-105 transition-transform duration-500">
-            <div className="bg-white rounded-full overflow-hidden flex items-center justify-center w-28 h-28 shadow-md">
-              <img
-                src={logoEmpresa}
-                alt="Logo"
-                className="h-full w-full object-cover transform scale-110 transition-transform"
-              />
+          <div className="relative p-[3px] bg-gradient-to-tr from-[#C5A473] to-[#8C6A3B] rounded-full shadow-[0_0_50px_rgba(197,164,115,0.3)] transform hover:scale-105 transition-transform duration-500">
+            <div className="bg-[#C5A473] rounded-full overflow-hidden flex items-center justify-center w-28 h-28 shadow-md">
+              <FiScissors className="text-white text-5xl" />
             </div>
           </div>
         </div>
@@ -224,9 +223,9 @@ export default function Login() {
 
           <div className="mb-10 text-center">
             <h1 className="text-3xl font-black text-white uppercase tracking-tighter italic leading-none">
-              BIENVENIDO <span className="text-secondary">DE VUELTA</span>
+              XOLOS <span className="text-[#C5A473]">BARBERSHOP</span>
             </h1>
-            <p className="text-white/30 text-[10px] mt-3 font-bold uppercase tracking-[0.3em]">Inicio de sesion </p>
+            <p className="text-white/30 text-[10px] mt-3 font-bold uppercase tracking-[0.3em]">Inicio de sesión</p>
           </div>
 
           {error && (
@@ -240,32 +239,32 @@ export default function Login() {
 
             {/* Campo Usuario */}
             <div className="flex flex-col gap-2 group">
-              <span className="text-white/20 text-[9px] font-black uppercase ml-4 tracking-[0.2em] group-focus-within:text-secondary transition-colors">Usuario</span>
+              <span className="text-white/20 text-[9px] font-black uppercase ml-4 tracking-[0.2em] group-focus-within:text-[#C5A473] transition-colors">Usuario</span>
               <div className="relative">
-                <FiUser className="absolute left-5 top-1/2 -translate-y-1/2 text-white/10 group-focus-within:text-secondary transition-colors" size={18} />
+                <FiUser className="absolute left-5 top-1/2 -translate-y-1/2 text-white/10 group-focus-within:text-[#C5A473] transition-colors" size={18} />
                 <input
                   type="text"
                   placeholder="Tu usuario"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   required
-                  className="w-full h-15 py-4 rounded-2xl bg-black/40 text-white border border-white/5 pl-14 pr-4 outline-none focus:border-secondary/40 focus:bg-black/60 transition-all font-bold text-sm"
+                  className="w-full h-15 py-4 rounded-2xl bg-black/40 text-white border border-white/5 pl-14 pr-4 outline-none focus:border-[#C5A473]/40 focus:bg-black/60 transition-all font-bold text-sm"
                 />
               </div>
             </div>
 
             {/* Campo Contraseña */}
             <div className="flex flex-col gap-2 group">
-              <span className="text-white/20 text-[9px] font-black uppercase ml-4 tracking-[0.2em] group-focus-within:text-primary transition-colors">Contraseña</span>
+              <span className="text-white/20 text-[9px] font-black uppercase ml-4 tracking-[0.2em] group-focus-within:text-[#C5A473] transition-colors">Contraseña</span>
               <div className="relative">
-                <FiLock className="absolute left-5 top-1/2 -translate-y-1/2 text-white/10 group-focus-within:text-primary transition-colors" size={18} />
+                <FiLock className="absolute left-5 top-1/2 -translate-y-1/2 text-white/10 group-focus-within:text-[#C5A473] transition-colors" size={18} />
                 <input
                   type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="w-full h-15 py-4 rounded-2xl bg-black/40 text-white border border-white/5 pl-14 pr-12 outline-none focus:border-primary/40 focus:bg-black/60 transition-all font-bold text-sm"
+                  className="w-full h-15 py-4 rounded-2xl bg-black/40 text-white border border-white/5 pl-14 pr-12 outline-none focus:border-[#C5A473]/40 focus:bg-black/60 transition-all font-bold text-sm"
                 />
                 <button
                   type="button"
@@ -280,7 +279,7 @@ export default function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="group relative w-full h-16 bg-primary text-white font-black rounded-2xl transition-all shadow-[0_10px_30px_rgba(0,51,160,0.3)] hover:scale-[1.02] active:scale-95 disabled:opacity-50 overflow-hidden mt-4"
+              className="group relative w-full h-16 bg-[#C5A473] text-white font-black rounded-2xl transition-all shadow-[0_10px_30px_rgba(197,164,115,0.3)] hover:scale-[1.02] active:scale-95 disabled:opacity-50 overflow-hidden mt-4"
             >
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
               <div className="flex items-center justify-center gap-3 uppercase tracking-[0.2em] text-[11px]">
@@ -301,7 +300,7 @@ export default function Login() {
               ¿Eres cliente nuevo?{" "}
               <button
                 onClick={() => navigate("/register")}
-                className="text-secondary hover:text-primary transition-colors underline underline-offset-4"
+                className="text-[#C5A473] hover:text-[#8C6A3B] transition-colors underline underline-offset-4"
               >
                 Regístrate aquí
               </button>
@@ -314,7 +313,7 @@ export default function Login() {
               <div className="w-1 h-1 rounded-full bg-green-500 animate-pulse" />
               <span>Server Online</span>
             </div>
-            <span>@Rhythm</span>
+            <span>@Xolos</span>
           </div>
         </div>
       </div>
