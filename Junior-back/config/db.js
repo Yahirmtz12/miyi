@@ -4,8 +4,8 @@ require('dotenv').config();
 
 const connectDB = async () => {
   try {
-    // Ahora usamos la variable de entorno
-    const uri = process.env.MONGO_URI; 
+    // Ahora usamos la variable de entorno con nombres alternativos por si acaso
+    const uri = process.env.MONGO_URI || process.env.MONGODB_URI || process.env.DATABASE_URL; 
 
     await mongoose.connect(uri);
     console.log('MongoDB Atlas conectado ✔');
