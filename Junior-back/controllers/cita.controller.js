@@ -89,17 +89,30 @@ exports.solicitarCita = async (req, res) => {
       
       const subscriptions = await PushSubscription.find({ userId: { $in: adminIds } });
       
+      // Evitar notificaciones duplicadas (misma suscripción guardada varias veces)
+      const uniqueSubs = [];
+      const seenEndpoints = new Set();
+      for (const sub of subscriptions) {
+        if (!seenEndpoints.has(sub.endpoint)) {
+          seenEndpoints.add(sub.endpoint);
+          uniqueSubs.push(sub);
+        }
+      }
+      
+      // Formatear fecha en UTC para que coincida con el día seleccionado (ej. 15/08/2026)
+      const fechaFormat = new Date(cita.fecha).toLocaleDateString('es-MX', { timeZone: 'UTC' });
+
       const payload = JSON.stringify({
-        title: '¡Nueva Cita! 💈',
-        body: `${cita.nombreCliente} agendó: ${cita.servicio} a las ${cita.horaInicio}.`,
+        title: `Nueva Cita: ${fechaFormat} 💈`,
+        body: `${cita.nombreCliente} agendó a las ${cita.horaInicio}.`,
         url: '/dashboard/citas'
       });
 
-      const pushPromises = subscriptions.map(sub => 
+      const pushPromises = uniqueSubs.map(sub => 
         webpush.sendNotification({ endpoint: sub.endpoint, keys: sub.keys }, payload)
           .catch(async err => {
             if (err.statusCode === 410 || err.statusCode === 404) {
-              await PushSubscription.findByIdAndDelete(sub._id);
+              await PushSubscription.deleteMany({ endpoint: sub.endpoint });
             } else {
               console.error('Error enviando push:', err);
             }
