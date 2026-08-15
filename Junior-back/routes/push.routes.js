@@ -10,7 +10,7 @@ router.get('/vapidPublicKey', (req, res) => {
 });
 
 // Ruta para guardar la suscripción
-router.post('/subscribe', auth, async (req, res) => {
+router.post('/subscribe', auth.verifyToken, async (req, res) => {
   try {
     const subscription = req.body;
     
