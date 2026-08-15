@@ -13,7 +13,6 @@ const categorySchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
-// Índice para búsquedas rápidas por nombre
-categorySchema.index({ nombre: 1 });
+// Índice implícito creado por unique: true
 
 module.exports = mongoose.model('Category', categorySchema);
